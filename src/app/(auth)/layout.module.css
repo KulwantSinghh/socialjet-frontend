@@ -1,0 +1,97 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--color-login-bg);
+  padding: var(--space-4);
+  position: relative;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 448px;
+}
+
+/* Brand Section */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+
+.logo {
+  width: 151px;
+  height: 28px;
+}
+
+.tagline {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-normal);
+  font-size: var(--text-base);
+  line-height: 20px;
+  letter-spacing: 0px;
+  text-align: center;
+  color: var(--color-login-tagline);
+}
+
+/* Card */
+.card {
+  width: 448px;
+  min-height: 448px;
+  background: var(--color-login-card-bg);
+  border: 1px solid var(--color-login-card-border);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-2xl);
+  padding: var(--space-8) var(--space-8);
+}
+
+/* Footer Links */
+.footerLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.footerLink {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-login-footer);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.footerLink:hover {
+  color: var(--color-text-secondary);
+}
+
+.footerDot {
+  font-size: var(--text-xs);
+  color: var(--color-login-footer);
+}
+
+/* Copyright */
+.copyright {
+  position: absolute;
+  bottom: var(--space-8);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-login-footer);
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 520px) {
+  .card {
+    width: 100%;
+    min-height: auto;
+    padding: var(--space-6) var(--space-5);
+  }
+}

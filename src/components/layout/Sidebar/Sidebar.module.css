@@ -1,0 +1,237 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background-color: var(--color-bg-primary);
+  border-right: 1px solid var(--color-border-default);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-sticky);
+  overflow: hidden; /* Fixed, NOT scrollable */
+}
+
+.header {
+  padding: var(--space-8) var(--space-6) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logoContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.logo {
+  object-fit: contain;
+}
+
+.tagline {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  letter-spacing: 0px;
+  text-align: center;
+  color: var(--color-login-tagline);
+}
+
+.divider {
+  width: calc(100% - 48px);
+  height: 1px;
+  background-color: var(--color-neutral-100);
+  margin: var(--space-4) auto var(--space-8);
+}
+
+.nav {
+  flex: 1;
+  padding: 0 var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Base Link Styles */
+.navLink,
+.accordionTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 100%;
+  letter-spacing: 0%;
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.navLinkContent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.navLinkActive {
+  background-color: var(--color-brand-purple) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
+}
+
+.navLink:hover:not(.navLinkActive) {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+/* Accordion Trigger Chevron */
+.chevron {
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Accordion & Sub Items */
+.accordion {
+  display: flex;
+  flex-direction: column;
+}
+
+.accordionContent {
+  display: flex;
+  position: relative;
+  margin-top: var(--space-1);
+}
+
+.subItemLine {
+  position: absolute;
+  left: 24px;
+  top: -12px;
+  bottom: 22px;
+  width: 1px;
+  background-color: var(--color-neutral-200);
+}
+
+.subItemsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  padding-left: 36px;
+}
+
+.subLink {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: var(--space-2-5) var(--space-4);
+  border-radius: var(--radius-xl);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  transition: all var(--transition-fast);
+}
+
+.subLink::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  width: 12px;
+  height: 20px;
+  border-left: 1px solid var(--color-neutral-200);
+  border-bottom: 1px solid var(--color-neutral-200);
+  border-bottom-left-radius: 8px;
+  transform: translateY(-100%);
+}
+
+.subLinkActive {
+  background-color: var(--color-brand-purple) !important;
+  color: #ffffff !important;
+}
+
+/* Footer & Action Bar */
+.footer {
+  padding: var(--space-6);
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+}
+
+.actionBtn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.actionBtn:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+/* Specific background styles for active states seen in screenshots */
+.actionBtnActive {
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.actionBtnBox {
+  border: 1px solid var(--color-neutral-100);
+  border-radius: var(--radius-md);
+  background-color: #fafafa;
+}
+
+.notifyWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifyDot {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  background-color: #ff2d55; /* Red dot center */
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+}

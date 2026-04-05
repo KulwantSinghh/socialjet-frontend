@@ -1,0 +1,76 @@
+.root {
+  background-color: var(--color-bg-primary);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.chartWrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-x-8) var(--space-y-4);
+  margin-top: var(--space-4);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.legendLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dotIcon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+}
+
+.innerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.name {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.val {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}

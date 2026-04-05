@@ -1,0 +1,201 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-10);
+}
+
+.proposalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.proposalTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-brand-purple);
+}
+
+.proposalTitleGroup h3 {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 700;
+  margin: 0;
+}
+
+.proposalActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  color: var(--color-brand-purple);
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.proposalCard {
+  background-color: white;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-3xl);
+  padding: var(--space-10);
+  box-shadow: var(--shadow-sm);
+}
+
+.proposalTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-10);
+}
+
+.proposalMainTitle {
+  font-family: var(--font-sans);
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #334155;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.preparedFor {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-text-tertiary);
+  margin: var(--space-2) 0 0 0;
+}
+
+.proposalNoCol {
+  text-align: right;
+}
+
+.propNoLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-weight: 700;
+  display: block;
+}
+
+.propNoValue {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.proposalContent {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--space-12);
+}
+
+@media (max-width: 900px) {
+  .proposalContent {
+    grid-template-columns: 1fr;
+  }
+}
+
+.propMainCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.propParaGroup h5 {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-brand-purple);
+  text-transform: uppercase;
+  margin: 0 0 var(--space-3) 0;
+}
+
+.propParaGroup p {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.approachCards {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.approachCard {
+  background-color: #f8fafc;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  flex: 1;
+}
+
+.approachCard strong {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.approachCard p {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-1);
+}
+
+.investmentCol h5 {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-brand-purple);
+  text-transform: uppercase;
+  margin: 0 0 var(--space-4) 0;
+}
+
+.investmentTable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.invRow {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.invRow span {
+  color: var(--color-text-tertiary);
+}
+
+.invRow strong {
+  color: var(--color-text-primary);
+}
+
+.invDivider {
+  height: 1px;
+  background-color: var(--color-border-default);
+  margin: var(--space-2) 0;
+}
+
+.invTotalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.invTotalRow span {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.totalPrice {
+  font-size: var(--text-xl) !important;
+  color: var(--color-brand-purple);
+}

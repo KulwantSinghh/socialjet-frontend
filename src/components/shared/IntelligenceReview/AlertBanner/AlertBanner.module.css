@@ -1,0 +1,27 @@
+.root {
+  background-color: #fef2f2;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid #fee2e2;
+}
+
+.root p {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: #991b1b;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dismissBtn {
+  background: none;
+  border: none;
+  color: #991b1b;
+  text-decoration: underline;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}

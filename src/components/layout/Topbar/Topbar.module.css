@@ -1,0 +1,89 @@
+.root {
+  height: var(--topbar-height);
+  background-color: var(--color-bg-primary);
+  border-bottom: 1px solid transparent; /* No visible border in screenshot */
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  width: 100%;
+}
+
+.content {
+  height: 100%;
+  padding: 0 var(--space-8);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.left {
+  flex: 1;
+  max-width: 440px; /* Aligns with the card width on the login page for consistency */
+}
+
+.searchInput {
+  height: 48px !important;
+  background-color: #f8f9fb !important; /* Extremely light grey from screenshot */
+  border: none !important;
+  border-radius: 9999px !important;
+  padding-left: var(--space-12) !important;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: #8e95a2 !important;
+}
+
+.searchInput::placeholder {
+  color: #8e95a2;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+}
+
+.userSection {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.avatarWrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Shadow from screenshot */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #eee;
+}
+
+.avatar {
+  object-fit: cover;
+}
+
+.toolBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.notificationWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 7px;
+  height: 7px;
+  background-color: #ff5a5f;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+}

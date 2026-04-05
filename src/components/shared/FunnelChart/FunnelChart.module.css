@@ -1,0 +1,71 @@
+.root {
+  background-color: var(--color-bg-primary);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+}
+
+.tabActive {
+  background-color: #ffffff;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.calendarBtn {
+  width: 36px;
+  height: 36px;
+  background-color: #fafafa;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.chartWrapper {
+  width: 100%;
+  margin-top: -20px;
+}

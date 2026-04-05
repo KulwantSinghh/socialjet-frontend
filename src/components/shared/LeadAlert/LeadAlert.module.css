@@ -1,0 +1,137 @@
+.root {
+  background: linear-gradient(135deg, #6c63ff 0%, #4b39ef 100%);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: 0 8px 32px rgba(75, 57, 239, 0.2);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.icon {
+  font-size: 1.25rem;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+.badge {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  background: rgba(255, 255, 255, 0.15);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  display: grid;
+  grid-template-columns: 1.5fr 1fr auto;
+  align-items: center;
+  gap: var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.userName {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 700;
+  margin: 0;
+}
+
+.userRole {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  opacity: 0.8;
+  margin: 0;
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.metaLabel {
+  font-size: var(--text-xs);
+  opacity: 0.7;
+}
+
+.metaValue {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.fastTrackBtn {
+  background: white !important;
+  color: #4b39ef !important;
+  font-weight: 700;
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-6);
+  height: auto;
+}
+
+.fastTrackBtn:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.time {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+@media (max-width: 1024px) {
+  .card {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
