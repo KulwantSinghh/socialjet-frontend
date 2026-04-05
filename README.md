@@ -62,14 +62,7 @@ This project follows a strict **Atomic/Modular Architecture** to ensure horizont
    npm run build
    ```
 
-## 📜 Coding Standards
-
-We follow strict linting and architectural rules defined in `AGENTS.md` and `ARCHITECTURE.md`.
-
-- Always use **Absolute Imports** (`@/components/...`).
-- **Server Components** by default.
-- Zero business logic in components (use hooks/services).
 
 ---
 
-Developed with ❤️ by SocialJet Engineering.
+
