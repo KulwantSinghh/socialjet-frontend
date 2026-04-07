@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     default: 'SocialJet CRM',
   },
   description: 'Internal CRM for managing sales, campaigns, and finance.',
+  icons: { icon: '/logoPink.svg' },
 };
 
 export default function RootLayout({

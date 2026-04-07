@@ -62,13 +62,13 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2-5) var(--space-4);
   border-radius: var(--radius-xl);
   color: var(--color-text-secondary);
   text-decoration: none;
   font-family: var(--font-sans);
-  font-size: 16px;
-  font-weight: 400;
+  font-size: var(--text-sm);
+  font-weight: 500;
   line-height: 100%;
   letter-spacing: 0%;
   transition: all var(--transition-fast);
@@ -144,12 +144,12 @@
   position: relative;
   display: flex;
   align-items: center;
-  padding: var(--space-2-5) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-xl);
   color: var(--color-text-secondary);
   text-decoration: none;
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: var(--text-sm);
   font-weight: 400;
   transition: all var(--transition-fast);
 }
@@ -174,10 +174,10 @@
 
 /* Footer & Action Bar */
 .footer {
-  padding: var(--space-6);
+  padding: var(--space-2) var(--space-6);
   display: flex;
   justify-content: center;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-1);
 }
 
 .footerActions {

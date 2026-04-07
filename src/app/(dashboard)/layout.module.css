@@ -64,6 +64,6 @@
 
 .content {
   flex: 1;
-  padding: var(--space-6);
+  padding: var(--space-4);
   background-color: var(--color-bg-secondary);
 }

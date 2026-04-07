@@ -1,0 +1,120 @@
+.root {
+  background-color: var(--color-bg-primary);
+  padding: var(--space-5);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.tabs {
+  background: var(--color-bg-secondary);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  transition: var(--transition-fast);
+}
+
+.tabActive {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.calendarBtn {
+  color: var(--color-text-tertiary);
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.calendarBtn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.label {
+  width: 100px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.barWrapper {
+  flex: 1;
+  background: var(--color-bg-secondary);
+  height: 24px;
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background-color: #f0e7ff; /* Light purple for funnel steps */
+  border-radius: var(--radius-md);
+  transition: width 0.3s ease;
+}
+
+.barPrimary {
+  background-color: var(--color-brand-purple); /* Primary brand purple for 'Contracted' */
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 124px;
+  margin-top: var(--space-2);
+}
+
+.axisValue {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}

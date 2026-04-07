@@ -1,0 +1,106 @@
+.root {
+  background-color: var(--color-brand-purple);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.iconBox {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.subtitle {
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  opacity: 0.9;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.influencerCard {
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.influencerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.avatarWrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.avatar {
+  object-fit: cover;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.category {
+  font-size: var(--text-xs);
+  opacity: 0.8;
+}
+
+.inviteBtn {
+  background: white !important;
+  color: var(--color-brand-purple) !important;
+  border: none !important;
+  font-weight: var(--font-weight-semibold) !important;
+  font-size: var(--text-xs) !important;
+  padding: 6px 16px !important;
+  height: 32px !important;
+}
+
+.inviteBtn:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
