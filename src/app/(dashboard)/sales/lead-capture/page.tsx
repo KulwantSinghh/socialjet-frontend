@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import styles from './page.module.css';
-import { StatsCard } from '@/components/shared/StatsCard';
+import { LeadCaptureStats } from './LeadCaptureStats';
 import { LeadAlert } from '@/components/shared/LeadAlert';
 import { SourceChart } from '@/components/shared/SourceChart';
 import { FunnelChart } from '@/components/shared/FunnelChart';
@@ -30,30 +30,7 @@ export default function LeadCapturePage() {
 
       {/* Stats Summary Row */}
       <section className={styles.statsRow}>
-        <StatsCard
-          label="Total Leads"
-          value="24"
-          trend={12.2}
-          icon={<span style={{ fontSize: '1.2rem' }}>👤+</span>}
-        />
-        <StatsCard
-          label="Web Form"
-          value="24"
-          trend={-31.1}
-          icon={<span style={{ fontSize: '1.2rem' }}>🌐</span>}
-        />
-        <StatsCard
-          label="Outreach Whatsapp"
-          value="48"
-          trend={12.2}
-          icon={<span style={{ fontSize: '1.2rem', color: '#25D366' }}>💬</span>}
-        />
-        <StatsCard
-          label="Converted"
-          value="156"
-          trend={-31.1}
-          icon={<span style={{ fontSize: '1.2rem' }}>🎯</span>}
-        />
+        <LeadCaptureStats />
       </section>
 
       {/* Charts Grid */}

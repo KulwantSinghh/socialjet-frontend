@@ -1,0 +1,129 @@
+.root {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sectionHeader h3 {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.regenerateBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: none;
+  border: none;
+  color: var(--color-brand-purple);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+.regenerateBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 0.9s linear infinite;
+  color: var(--color-brand-purple);
+}
+
+.errorState {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-error-500);
+  background-color: #fff1f2;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.errorState button {
+  background: none;
+  border: none;
+  color: var(--color-brand-purple);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: 0;
+  margin-left: var(--space-2);
+}
+
+.summaryContent {
+  background-color: #f8fafc;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-6);
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.summaryContent::-webkit-scrollbar {
+  width: 4px;
+}
+
+.summaryContent::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 2px;
+}
+
+.summaryContent::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.summaryText {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.75;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.emptyState {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  margin: 0;
+  padding: var(--space-4) 0;
+  text-align: center;
+}

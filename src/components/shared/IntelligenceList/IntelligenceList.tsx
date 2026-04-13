@@ -1,11 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './IntelligenceList.module.css';
 import { cn } from '@/lib/utils';
+import { useIntelligenceCalls } from '@/hooks/useIntelligenceCalls';
+import { useMeetings } from '@/hooks/useMeetings';
+import { useCallStore } from '@/stores/callStore';
+import type { IntelligenceCall } from '@/types/intelligence.types';
+import type { Meeting } from '@/types/meeting.types';
 
-// Icons
+// ---- Icons (unchanged) ----
+
 const ChevronIcon = ({
   direction = 'down',
   size = 16,
@@ -92,57 +98,213 @@ const PlatformIcon = ({ name }: { name: string }) => {
   return null;
 };
 
-// Data
-const FLAGGED_CALLS = [
-  {
-    id: 'f1',
-    brand: 'Freshworks India',
-    contact: 'Rajan Pillai',
-    description:
-      'Cancellation intent — client mentioned exploring another agency. No proposal generated.',
-    time: '18 min',
-    platform: 'Zoom',
-    date: 'March 19, 2025',
-    isFlagged: true,
-  },
-];
+// ---- Helpers ----
 
-const PROCESSED_CALLS = [
-  {
-    id: 'p1',
-    brand: 'WOW Skin Science',
-    contact: 'Manish Chowdhary',
-    description:
-      "Instagram Reels + YouTube with skincare creators. 'Dermatologist-tested' messaging required.",
-    time: '18 min',
-    platform: 'Zoom',
-    date: 'March 19, 2025',
-  },
-  {
-    id: 'p2',
-    brand: 'Boat Lifestyle',
-    contact: 'Aman Gupta',
-    description:
-      "Instagram Reels + YouTube with skincare creators. 'Dermatologist-tested' messaging required.",
-    time: '18 min',
-    platform: 'Zoom',
-    date: 'March 19, 2025',
-  },
-  {
-    id: 'p3',
-    brand: 'Sugar Cosmetics',
-    contact: 'Vineeta Singh',
-    description:
-      "Instagram Reels + YouTube with skincare creators. 'Dermatologist-tested' messaging required.",
-    time: '18 min',
-    platform: 'Zoom',
-    date: 'March 19, 2025',
-  },
-];
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+// ---- Card ----
+
+function IntelligenceCard({
+  call,
+  onReview,
+}: {
+  call: IntelligenceCall;
+  onReview: (call: IntelligenceCall) => void;
+}) {
+  const title = call.lead_company ? `${call.lead_company}: ${call.lead_name}` : call.lead_name;
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardMain}>
+        <div className={styles.cardTitleRow}>
+          <h4>{title}</h4>
+          <button className={styles.reviewBtn} onClick={() => onReview(call)}>
+            Review
+          </button>
+        </div>
+        <p className={cn(styles.description, call.flag_for_review && styles.flaggedDescription)}>
+          {call.call_summary}
+        </p>
+        <div className={styles.metadata}>
+          <span className={styles.metaItem}>
+            <CalendarIcon /> {call.duration || '—'}
+          </span>
+          <span className={styles.metaItem}>
+            <PlatformIcon name={call.platform} /> {call.platform}
+          </span>
+          <span className={styles.metaItem}>
+            <CalendarIcon /> {formatDate(call.created_at)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Meeting Card ----
+
+function MeetingCard({
+  meeting,
+  onReview,
+}: {
+  meeting: Meeting;
+  onReview: (meeting: Meeting) => void;
+}) {
+  const title = meeting.invitee_name;
+  const subtitle = meeting.event_name;
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardMain}>
+        <div className={styles.cardTitleRow}>
+          <h4>
+            {title} <span>— {subtitle}</span>
+          </h4>
+          {meeting.meeting_status === 'done' && (
+            <button className={styles.reviewBtn} onClick={() => onReview(meeting)}>
+              Review
+            </button>
+          )}
+          {meeting.meeting_status === 'upcoming' && meeting.zoom_join_url && (
+            <a
+              className={styles.joinZoomBtn}
+              href={meeting.zoom_join_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Join Zoom
+            </a>
+          )}
+        </div>
+        <div className={styles.metadata}>
+          <span className={styles.metaItem}>
+            <CalendarIcon /> {formatDateTime(meeting.scheduled_at)}
+          </span>
+          {meeting.duration && (
+            <span className={styles.metaItem}>
+              <CalendarIcon /> {meeting.duration}
+            </span>
+          )}
+          <span className={styles.metaItem}>
+            {meeting.meeting_status === 'done' && '✓ Done'}
+            {meeting.meeting_status === 'upcoming' && '⏳ Upcoming'}
+            {meeting.meeting_status === 'canceled' && '✕ Canceled'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- Skeleton ----
+
+function SkeletonCard() {
+  return (
+    <div className={styles.card} style={{ opacity: 0.6 }}>
+      <div className={styles.cardMain}>
+        <div className={styles.cardTitleRow}>
+          <div style={{ height: 16, width: 200, background: '#f0f0f0', borderRadius: 4 }} />
+          <div style={{ height: 28, width: 60, background: '#f0f0f0', borderRadius: 8 }} />
+        </div>
+        <div
+          style={{
+            height: 14,
+            width: '80%',
+            background: '#f0f0f0',
+            borderRadius: 4,
+            margin: '8px 0 16px',
+          }}
+        />
+        <div style={{ height: 12, width: '40%', background: '#f0f0f0', borderRadius: 4 }} />
+      </div>
+    </div>
+  );
+}
+
+// ---- Main ----
 
 export const IntelligenceList = () => {
+  const router = useRouter();
+  const setSelectedCall = useCallStore((s) => s.setSelectedCall);
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading } = useIntelligenceCalls({ days: 7, page, page_size: 30 });
+  const calls = data?.calls ?? [];
+  const totalPages = data?.total_pages ?? 1;
+
+  const { data: meetingsData, isLoading: meetingsLoading } = useMeetings({
+    page: 1,
+    page_size: 30,
+  });
+  const meetings = meetingsData?.meetings ?? [];
+
+  function handleReview(call: IntelligenceCall) {
+    setSelectedCall(call);
+    router.push(`/sales/intelligence/review/${call.call_id}`);
+  }
+
+  function handleMeetingReview(meeting: Meeting) {
+    setSelectedCall({
+      call_id: meeting.meeting_id,
+      lead_id: meeting.lead_id ?? '',
+      meeting_id: meeting.meeting_id,
+      lead_name: meeting.invitee_name,
+      lead_company: meeting.event_name,
+      call_summary: meeting.transcript_content ?? '',
+      client_needs: '',
+      platform: 'Zoom',
+      duration: meeting.duration ?? '',
+      created_at: meeting.scheduled_at,
+      flag_for_review: false,
+      flag_reason: '',
+      review_status: 'pending',
+      status: 'processed',
+      call_outcome: 'neutral',
+      has_proposal: false,
+      analyzed_by: '',
+    });
+    router.push(`/sales/intelligence/review/${meeting.meeting_id}`);
+  }
+
+  // Local search filter
+  const searched = calls.filter((c) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      c.lead_name.toLowerCase().includes(q) ||
+      c.lead_company.toLowerCase().includes(q) ||
+      c.call_summary.toLowerCase().includes(q)
+    );
+  });
+
+  // Split into flagged vs processed
+  const flagged = searched.filter((c) => {
+    if (activeFilter === 'Pending') return false;
+    return c.flag_for_review;
+  });
+
+  const processed = searched.filter((c) => {
+    if (activeFilter === 'Flagged') return false;
+    return !c.flag_for_review;
+  });
 
   return (
     <div className={styles.root}>
@@ -179,7 +341,7 @@ export const IntelligenceList = () => {
         </button>
       </div>
 
-      {/* Flags Section */}
+      {/* Flagged Section */}
       {(activeFilter === 'All' || activeFilter === 'Flagged') && (
         <section className={styles.group}>
           <div className={styles.groupHeader}>
@@ -204,9 +366,22 @@ export const IntelligenceList = () => {
             </button>
           </div>
           <div className={styles.groupList}>
-            {FLAGGED_CALLS.map((call) => (
-              <IntelligenceCard key={call.id} call={call} />
-            ))}
+            {isLoading ? (
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
+            ) : flagged.length === 0 ? (
+              <p
+                style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', padding: '8px 0' }}
+              >
+                No flagged calls.
+              </p>
+            ) : (
+              flagged.map((call) => (
+                <IntelligenceCard key={call.call_id} call={call} onReview={handleReview} />
+              ))
+            )}
           </div>
         </section>
       )}
@@ -235,67 +410,87 @@ export const IntelligenceList = () => {
             </button>
           </div>
           <div className={styles.groupList}>
-            {PROCESSED_CALLS.map((call) => (
-              <IntelligenceCard key={call.id} call={call} />
-            ))}
+            {isLoading ? (
+              <>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </>
+            ) : processed.length === 0 ? (
+              <p
+                style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', padding: '8px 0' }}
+              >
+                No processed calls.
+              </p>
+            ) : (
+              processed.map((call) => (
+                <IntelligenceCard key={call.call_id} call={call} onReview={handleReview} />
+              ))
+            )}
           </div>
         </section>
       )}
 
+      {/* Meetings Section */}
+      <section className={styles.group}>
+        <div className={styles.groupHeader}>
+          <div className={styles.groupTitle}>
+            <span className={styles.calendarIconSmall}>
+              <CalendarIcon />
+            </span>
+            <h3>Meetings</h3>
+          </div>
+        </div>
+        <div className={styles.groupList}>
+          {meetingsLoading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : meetings.length === 0 ? (
+            <p style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', padding: '8px 0' }}>
+              No meetings found.
+            </p>
+          ) : (
+            meetings.map((meeting) => (
+              <MeetingCard
+                key={meeting.meeting_id}
+                meeting={meeting}
+                onReview={handleMeetingReview}
+              />
+            ))
+          )}
+        </div>
+      </section>
+
       {/* Pagination */}
-      <div className={styles.pagination}>
-        <button className={styles.pageArrow}>
-          <ChevronIcon direction="left" />
-        </button>
-        <button className={cn(styles.pageItem, styles.pageItemActive)}>1</button>
-        <button className={styles.pageItem}>2</button>
-        <button className={styles.pageItem}>3</button>
-        <button className={styles.pageArrow}>
-          <ChevronIcon direction="right" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-interface IntelligenceCall {
-  id: string;
-  brand: string;
-  contact: string;
-  description: string;
-  time: string;
-  platform: string;
-  date: string;
-  isFlagged?: boolean;
-}
-
-const IntelligenceCard = ({ call }: { call: IntelligenceCall }) => {
-  return (
-    <div className={styles.card}>
-      <div className={styles.cardMain}>
-        <div className={styles.cardTitleRow}>
-          <h4>
-            {call.brand}: <span>{call.contact}</span>
-          </h4>
-          <Link href={`/sales/intelligence/review/${call.id}`} className={styles.reviewBtn}>
-            Review
-          </Link>
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button
+            className={styles.pageArrow}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            <ChevronIcon direction="left" />
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              className={cn(styles.pageItem, page === p && styles.pageItemActive)}
+              onClick={() => setPage(p)}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            className={styles.pageArrow}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            <ChevronIcon direction="right" />
+          </button>
         </div>
-        <p className={cn(styles.description, call.isFlagged && styles.flaggedDescription)}>
-          {call.description}
-        </p>
-        <div className={styles.metadata}>
-          <span className={styles.metaItem}>
-            <CalendarIcon /> {call.time}
-          </span>
-          <span className={styles.metaItem}>
-            <PlatformIcon name={call.platform} /> {call.platform}
-          </span>
-          <span className={styles.metaItem}>
-            <CalendarIcon /> {call.date}
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

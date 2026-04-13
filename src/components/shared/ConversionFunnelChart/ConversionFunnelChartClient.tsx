@@ -6,6 +6,7 @@
  */
 import dynamic from 'next/dynamic';
 import styles from './ConversionFunnelChart.module.css';
+import type { ConversionFunnelChartProps } from './ConversionFunnelChart';
 
 const ConversionFunnelChartInner = dynamic(
   () =>
@@ -18,4 +19,6 @@ const ConversionFunnelChartInner = dynamic(
   }
 );
 
-export const ConversionFunnelChartClient = () => <ConversionFunnelChartInner />;
+export const ConversionFunnelChartClient = (props: ConversionFunnelChartProps) => (
+  <ConversionFunnelChartInner {...props} />
+);

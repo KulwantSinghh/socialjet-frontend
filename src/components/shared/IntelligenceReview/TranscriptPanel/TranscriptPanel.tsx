@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import styles from './TranscriptPanel.module.css';
-import { cn } from '@/lib/utils';
+import { useTranscript } from '@/hooks/useIntelligenceCalls';
 
-// Icons
 const SearchIcon = () => (
   <svg
     width="16"
@@ -21,91 +20,92 @@ const SearchIcon = () => (
   </svg>
 );
 
-const HighlightIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+const SpinnerIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={styles.spinner}
+  >
+    <path d="M21 12a9 9 0 11-6.219-8.56" />
   </svg>
 );
 
-export const TranscriptPanel = () => {
-  const [filter, setFilter] = useState<'Full' | 'Highlights'>('Full');
+interface TranscriptPanelProps {
+  meetingId?: string;
+}
+
+export const TranscriptPanel = ({ meetingId }: TranscriptPanelProps) => {
   const [search, setSearch] = useState('');
+  const { data: transcript, isLoading, isError, refetch } = useTranscript(meetingId);
+
+  const lines = useMemo(() => {
+    if (!transcript) return [];
+    return transcript.split('\n').filter((l) => l.trim().length > 0);
+  }, [transcript]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return lines;
+    const q = search.toLowerCase();
+    return lines.filter((l) => l.toLowerCase().includes(q));
+  }, [lines, search]);
 
   return (
     <section className={styles.root}>
       <div className={styles.sectionHeader}>
         <h3>Transcript</h3>
-        <div className={styles.segmentedControl}>
-          {(['Full', 'Highlights'] as const).map((f) => (
-            <button
-              key={f}
-              className={cn(styles.segmentBtn, filter === f && styles.segmentBtnActive)}
-              onClick={() => setFilter(f)}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        {transcript && <span className={styles.lineCount}>{lines.length} lines</span>}
       </div>
 
-      <div className={styles.searchWrapper}>
-        <span className={styles.searchIcon}>
-          <SearchIcon />
-        </span>
-        <input
-          type="text"
-          placeholder="Search"
-          className={styles.searchInput}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className={styles.transcriptList}>
-        <div className={styles.transcriptItem}>
-          <div className={styles.transcriptMeta}>
-            <span className={styles.speakerName}>Sarah (Client)</span>
-            <span className={styles.timestamp}>02:14</span>
-          </div>
-          <p className={styles.speakerText}>
-            We&apos;re looking for something that can scale across our three regional offices.
-            Currently, we&apos;re spending about $5k a month on manual data entry which is just too
-            high.
-          </p>
+      {isLoading && (
+        <div className={styles.loadingState}>
+          <SpinnerIcon />
+          <span>Loading transcript…</span>
         </div>
+      )}
 
-        <div className={styles.transcriptItem}>
-          <div className={styles.transcriptMeta}>
-            <span className={styles.speakerNameSales}>Joel (Sales)</span>
-            <span className={styles.timestamp}>02:45</span>
-          </div>
-          <p className={styles.speakerText}>
-            That makes sense. Our enterprise tier is designed exactly for that multi-region setup.
-            Have you set a specific budget for the transition this quarter?
-          </p>
+      {isError && !isLoading && (
+        <div className={styles.errorState}>
+          <p>Failed to load transcript.</p>
+          <button onClick={() => refetch()}>Retry</button>
         </div>
+      )}
 
-        <div className={styles.aiHighlight}>
-          <div className={styles.highlightHeader}>
-            <HighlightIcon />
-            <span>AI Highlight: Budget</span>
+      {!isLoading && !isError && (
+        <>
+          <div className={styles.searchWrapper}>
+            <span className={styles.searchIcon}>
+              <SearchIcon />
+            </span>
+            <input
+              type="text"
+              placeholder="Search transcript…"
+              className={styles.searchInput}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <p>
-            &ldquo;We&apos;re looking at a $45k cap for the initial implementation phase.&rdquo;
-          </p>
-        </div>
 
-        <div className={styles.transcriptItem}>
-          <div className={styles.transcriptMeta}>
-            <span className={styles.speakerName}>Sarah (Client)</span>
-            <span className={styles.timestamp}>04:12</span>
+          <div className={styles.transcriptList}>
+            {!transcript ? (
+              <p className={styles.empty}>No transcript available for this call.</p>
+            ) : filtered.length === 0 ? (
+              <p className={styles.empty}>No results for &ldquo;{search}&rdquo;</p>
+            ) : (
+              filtered.map((line, i) => (
+                <p key={i} className={styles.transcriptLine}>
+                  {line}
+                </p>
+              ))
+            )}
           </div>
-          <p className={styles.speakerText}>
-            Ideally, we need this live by June 1st to align with our new fiscal year. Is that a
-            realistic timeline for your team?
-          </p>
-        </div>
-      </div>
+        </>
+      )}
     </section>
   );
 };

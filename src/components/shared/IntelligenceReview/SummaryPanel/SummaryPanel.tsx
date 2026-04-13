@@ -1,6 +1,7 @@
 'use client';
 
 import styles from './SummaryPanel.module.css';
+import { useMeetingSummary } from '@/hooks/useIntelligenceCalls';
 
 const RefreshIcon = () => (
   <svg
@@ -18,55 +19,86 @@ const RefreshIcon = () => (
   </svg>
 );
 
-export const SummaryPanel = () => {
+const SpinnerIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={styles.spinner}
+  >
+    <path d="M21 12a9 9 0 11-6.219-8.56" />
+  </svg>
+);
+
+interface SummaryPanelProps {
+  meetingId?: string;
+}
+
+export const SummaryPanel = ({ meetingId }: SummaryPanelProps) => {
+  // isFetching is true on BOTH initial load and Regenerate re-fetches
+  const { data, isFetching, isError, refetch } = useMeetingSummary(meetingId);
+
+  const summary = data?.summary;
+
   return (
     <section className={styles.root}>
       <div className={styles.sectionHeader}>
         <h3>AI Call Summary</h3>
-        <button className={styles.regenerateBtn}>
-          <RefreshIcon /> Regenerate
+        <button className={styles.regenerateBtn} onClick={() => refetch()} disabled={isFetching}>
+          <RefreshIcon /> {isFetching ? 'Generating…' : 'Regenerate'}
         </button>
       </div>
 
-      <div className={styles.discussionSection}>
-        <h4>Discussion Points</h4>
-        <div className={styles.discussionBox}>
-          <ul className={styles.discussionList}>
-            <li>Client expressed frustration with current manual data entry costs ($60k/yr).</li>
-            <li>Interested in Enterprise tier for multi-region scalability.</li>
-            <li>Security compliance (SOC2) was mentioned as a prerequisite.</li>
-          </ul>
+      {isFetching && (
+        <div className={styles.loadingState}>
+          <SpinnerIcon />
+          <span>Generating AI summary…</span>
         </div>
-      </div>
+      )}
 
-      <div className={styles.metricsGrid}>
-        <div className={styles.metricCard}>
-          <span className={styles.metricLabel}>Budget</span>
-          <div className={styles.metricValue}>$45,000</div>
-          <span className={styles.metricSub}>Initial phase cap</span>
+      {isError && !isFetching && (
+        <div className={styles.errorState}>
+          Unable to generate summary. <button onClick={() => refetch()}>Try again</button>
         </div>
-        <div className={styles.metricCard}>
-          <span className={styles.metricLabel}>Timeline</span>
-          <div className={styles.metricValue}>June 1, 2024</div>
-          <span className={styles.metricSub}>Go-live target</span>
-        </div>
-      </div>
+      )}
 
-      <div className={styles.actionItemsSection}>
-        <h4>Action Items</h4>
-        <div className={styles.actionList}>
-          <div className={styles.actionItem}>
-            <input type="checkbox" id="action-1" readOnly />
-            <label htmlFor="action-1">Send SOC2 compliance documentation</label>
-            <span className={styles.assigneeTag}>Joel M.</span>
+      {!isFetching && !isError && summary && (
+        <div className={styles.summaryContent}>
+          <div className={styles.metricsRow}>
+            <div className={styles.metricCard}>
+              <span className={styles.metricLabel}>Budget</span>
+              <span className={styles.metricValue}>{summary.budget || 'Not discussed'}</span>
+            </div>
+            <div className={styles.metricCard}>
+              <span className={styles.metricLabel}>Timeline</span>
+              <span className={styles.metricValue}>{summary.timeline || 'Not discussed'}</span>
+            </div>
           </div>
-          <div className={styles.actionItem}>
-            <input type="checkbox" id="action-2" readOnly />
-            <label htmlFor="action-2">Draft custom proposal for Enterprise Tier</label>
-            <span className={styles.assigneeTag}>Joel M.</span>
-          </div>
+
+          {summary.discussion_points?.length > 0 && (
+            <div className={styles.discussionSection}>
+              <h4 className={styles.discussionTitle}>Discussion Points</h4>
+              <ul className={styles.discussionList}>
+                {summary.discussion_points.map((point, i) => (
+                  <li key={i} className={styles.discussionItem}>
+                    <span className={styles.bullet} />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-      </div>
+      )}
+
+      {!isFetching && !isError && !summary && !meetingId && (
+        <p className={styles.emptyState}>No meeting selected.</p>
+      )}
     </section>
   );
 };

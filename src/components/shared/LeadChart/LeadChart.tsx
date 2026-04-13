@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   LineChart,
   Line,
@@ -10,35 +11,42 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import styles from './LeadChart.module.css';
+import { useLeadVelocity } from '@/hooks/useLeadVelocity';
+import type { VelocityPeriod } from '@/types/leads.types';
 
-const data = [
-  { name: 'Mon', newLeads: 12, qualified: 8, proposals: 5 },
-  { name: 'Tue', newLeads: 18, qualified: 12, proposals: 7 },
-  { name: 'Wed', newLeads: 15, qualified: 10, proposals: 8 },
-  { name: 'Thu', newLeads: 22, qualified: 16, proposals: 11 },
-  { name: 'Fri', newLeads: 17, qualified: 14, proposals: 12 },
-  { name: 'Sat', newLeads: 20, qualified: 17, proposals: 13 },
-  { name: 'Sun', newLeads: 19, qualified: 15, proposals: 11 },
+const PERIODS: { label: string; value: VelocityPeriod }[] = [
+  { label: 'Day', value: 'day' },
+  { label: 'Week', value: 'week' },
+  { label: 'Month', value: 'month' },
 ];
 
 export const LeadChart = () => {
+  const [period, setPeriod] = useState<VelocityPeriod>('week');
+  const { data, isFetching } = useLeadVelocity(period);
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
         <h3 className={styles.title}>Lead Velocity & Pipeline</h3>
         <div className={styles.controls}>
           <div className={styles.tabs}>
-            <button className={cn(styles.tab, styles.tabActive)}>Day</button>
-            <button className={styles.tab}>Week</button>
-            <button className={styles.tab}>Month</button>
+            {PERIODS.map(({ label, value }) => (
+              <button
+                key={value}
+                className={cn(styles.tab, period === value && styles.tabActive)}
+                onClick={() => setPeriod(value)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           <button className={styles.calendarBtn}>📅</button>
         </div>
       </div>
 
-      <div className={styles.chartWrapper}>
+      <div className={cn(styles.chartWrapper, isFetching && styles.chartFetching)}>
         <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={data} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
+          <LineChart data={data ?? []} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
             <XAxis
               dataKey="name"

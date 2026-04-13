@@ -51,6 +51,31 @@
   width: 100%;
 }
 
+/* Stats skeleton placeholder — same size as a StatsCard */
+.statsSkeleton {
+  flex: 1;
+  min-width: 200px;
+  height: 88px;
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+[data-theme='dark'] .statsSkeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1280px) {
   .chartsGrid {

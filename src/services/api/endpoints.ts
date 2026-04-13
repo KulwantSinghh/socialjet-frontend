@@ -11,6 +11,7 @@ export const ENDPOINTS = {
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     ME: '/auth/me',
+    CREATE_USER: '/auth/users',
   },
 
   USERS: {
@@ -22,12 +23,15 @@ export const ENDPOINTS = {
   },
 
   LEADS: {
-    LIST: '/leads',
+    LIST: '/leads/',
     DETAIL: (id: string) => `/leads/${id}`,
-    CREATE: '/leads',
+    CREATE: '/leads/',
     UPDATE: (id: string) => `/leads/${id}`,
     DELETE: (id: string) => `/leads/${id}`,
     CONVERT: (id: string) => `/leads/${id}/convert`,
+    ALERTS: '/leads/alerts',
+    STATS: '/leads/stats',
+    FUNNEL: '/leads/funnel',
   },
 
   PIPELINE: {
@@ -62,6 +66,8 @@ export const ENDPOINTS = {
   },
 
   NURTURE: {
+    DASHBOARD: '/nurture/dashboard',
+    DETAIL: (leadId: string) => `/nurture/${leadId}/detail`,
     SEQUENCES: '/nurture/sequences',
     AGENTS: '/nurture/agents',
     AGENT_DETAIL: (id: string) => `/nurture/agents/${id}`,
@@ -79,5 +85,23 @@ export const ENDPOINTS = {
     SALES: '/reports/sales',
     CAMPAIGNS: '/reports/campaigns',
     FINANCE: '/reports/finance',
+  },
+
+  SALES: {
+    VELOCITY: '/sales/velocity',
+    ACTIVITY: '/sales/activity',
+    DASHBOARD: '/sales/dashboard',
+  },
+
+  INTELLIGENCE: {
+    CALLS: '/sales/intelligence/calls',
+    REVIEW: (callId: string) => `/sales/intelligence/calls/${callId}/review`,
+    MEETING_SUMMARY: '/sales/intelligence/meeting-summary',
+    ANALYZE: '/sales/analyze',
+    TRANSCRIPT: (meetingId: string) => `/meetings/${meetingId}/transcript`,
+  },
+
+  MEETINGS: {
+    LIST: '/meetings/',
   },
 } as const;

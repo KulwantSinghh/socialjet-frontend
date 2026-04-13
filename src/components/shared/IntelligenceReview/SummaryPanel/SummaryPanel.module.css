@@ -3,13 +3,15 @@
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-2xl);
   padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .sectionHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-4);
 }
 
 .sectionHeader h3 {
@@ -31,113 +33,150 @@
   font-size: var(--text-xs);
   font-weight: 700;
   cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.discussionSection h4,
-.actionItemsSection h4 {
+.regenerateBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) 0;
+  justify-content: center;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--space-3) 0;
+  color: var(--color-text-tertiary);
 }
 
-.discussionBox {
-  background-color: white;
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-xl);
-  padding: var(--space-4) var(--space-6);
-  margin-bottom: var(--space-6);
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.discussionList {
-  margin: 0;
-  padding-left: var(--space-4);
-  list-style-type: disc;
-}
-
-.discussionList li {
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-  margin-bottom: var(--space-2);
-}
-
-.discussionList li::marker {
+.spinner {
+  animation: spin 0.9s linear infinite;
   color: var(--color-brand-purple);
 }
 
-.metricsGrid {
+.errorState {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-error-500);
+  background-color: #fff1f2;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.errorState button {
+  background: none;
+  border: none;
+  color: var(--color-brand-purple);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: 0;
+  margin-left: var(--space-2);
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Budget + Timeline cards */
+.metricsRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
-  margin-bottom: var(--space-6);
 }
 
 .metricCard {
   background-color: #f8fafc;
+  border: 1px solid var(--color-border-default);
   border-radius: var(--radius-xl);
-  padding: var(--space-5);
+  padding: var(--space-4) var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
 .metricLabel {
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--color-text-tertiary);
-  font-weight: 600;
 }
 
 .metricValue {
-  font-size: var(--text-xl);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--color-text-primary);
+  line-height: 1.4;
 }
 
-.metricSub {
-  font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
-}
-
-.actionList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* Discussion Points */
+.discussionSection {
   background-color: white;
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-xl);
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-6);
 }
 
-.actionItem {
+.discussionTitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.discussionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-3);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid #f1f5f9;
 }
 
-.actionItem:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.actionItem label {
-  flex: 1;
+.discussionItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  cursor: pointer;
+  line-height: 1.6;
 }
 
-.assigneeTag {
+.bullet {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-brand-purple);
+  margin-top: 7px;
+}
+
+.emptyState {
   font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  font-weight: 800;
-  color: var(--color-brand-purple);
-  background-color: #eef2ff;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  margin: 0;
+  padding: var(--space-4) 0;
+  text-align: center;
 }

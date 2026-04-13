@@ -9,6 +9,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  flex-shrink: 0;
 }
 
 .title {
@@ -34,6 +35,7 @@
   flex-wrap: wrap;
   gap: var(--space-6);
   width: 100%;
+  flex-shrink: 0;
 }
 
 .mainGrid {
@@ -49,19 +51,64 @@
 }
 
 .activityCol {
+  /*
+   * Explicit viewport-calc height so the feed never grows when items load.
+   *
+   * Breakdown of what sits above this col:
+   *   topbar                   = var(--topbar-height)   (64px)
+   *   content padding t+b      = var(--space-12)        (48px)
+   *   page header (title+sub)  ≈ 64px
+   *   gap header→stats         = var(--space-8)         (32px)
+   *   stats row (with sublabel)≈ 120px
+   *   gap stats→grid           = var(--space-8)         (32px)
+   *   ────────────────────────────────────────────────────────
+   *   fixed portion            ≈ 248px  +  css-var portion
+   */
+  height: calc(100vh - var(--topbar-height) - var(--space-12) - 252px);
+  min-height: 320px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Responsive adjustments */
+/* Stats skeleton placeholder — same size as a StatsCard */
+.statsSkeleton {
+  flex: 1;
+  min-width: 200px;
+  height: 88px;
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+[data-theme='dark'] .statsSkeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+/* ---- Responsive ---- */
 @media (max-width: 1200px) {
   .mainGrid {
     grid-template-columns: 1fr;
   }
 
+  .activityCol {
+    height: 480px; /* fixed when stacked */
+  }
+
   .statsRow {
-    grid-template-columns: repeat(2, 1fr);
     display: grid;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -72,5 +119,9 @@
 
   .title {
     font-size: var(--text-2xl);
+  }
+
+  .activityCol {
+    height: 420px;
   }
 }
