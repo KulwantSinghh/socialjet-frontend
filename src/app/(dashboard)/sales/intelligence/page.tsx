@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import styles from './page.module.css';
 import { StatsCard } from '@/components/shared/StatsCard';
 import { IntelligenceList } from '@/components/shared/IntelligenceList';
@@ -102,7 +103,9 @@ export default function SalesIntelligencePage() {
       </section>
 
       {/* Main Content Area (Intelligence List) */}
-      <IntelligenceList />
+      <Suspense fallback={null}>
+        <IntelligenceList />
+      </Suspense>
     </div>
   );
 }

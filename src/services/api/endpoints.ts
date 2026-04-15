@@ -75,6 +75,16 @@ export const ENDPOINTS = {
     REPLY: (id: string) => `/nurture/agents/${id}/reply`,
   },
 
+  EMAIL_NURTURE: {
+    DRAFT: (leadId: string) => `/email/nurture/${leadId}/draft`,
+    APPROVE: (emailId: string) => `/email/nurture/emails/${emailId}/approve`,
+    APPROVAL_QUEUE: '/email/nurture/approval-queue',
+    HISTORY: (leadId: string) => `/email/nurture/${leadId}/history`,
+    LIST: '/email/nurture/emails',
+    DETAIL: (emailId: string) => `/email/nurture/emails/${emailId}`,
+    DELETE: (emailId: string) => `/email/nurture/emails/${emailId}`,
+  },
+
   NOTIFICATIONS: {
     LIST: '/notifications',
     MARK_READ: (id: string) => `/notifications/${id}/read`,

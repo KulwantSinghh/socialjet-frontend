@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import styles from './ProposalPreview.module.css';
 import { useSalesAnalysis } from '@/hooks/useIntelligenceCalls';
 import type {
@@ -94,7 +94,13 @@ function MetricRow({ metric }: { metric: SalesKeyMetric }) {
 
 // ---- Proposal document ----
 
-function ProposalDocument({ data }: { data: SalesAnalysis }) {
+function ProposalDocument({
+  data,
+  docRef,
+}: {
+  data: SalesAnalysis;
+  docRef: React.RefObject<HTMLDivElement | null>;
+}) {
   const date = new Date().toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -105,7 +111,7 @@ function ProposalDocument({ data }: { data: SalesAnalysis }) {
   );
 
   return (
-    <div className={styles.document}>
+    <div className={styles.document} ref={docRef}>
       {/* ── Hero Header ── */}
       <div className={styles.heroHeader}>
         <div className={styles.heroMeta}>
@@ -359,6 +365,47 @@ const DownloadIcon = () => (
 
 export const ProposalPreview = ({ meetingId, transcript }: ProposalPreviewProps) => {
   const { data, isLoading, isError, refetch } = useSalesAnalysis(meetingId, transcript);
+  const docRef = useRef<HTMLDivElement>(null);
+
+  const handleDownload = useCallback(() => {
+    if (!docRef.current) return;
+
+    const html = docRef.current.outerHTML;
+
+    // Collect all <style> tags injected by Next.js (includes hashed CSS Module rules)
+    const styleBlocks = Array.from(document.querySelectorAll('style'))
+      .map((el) => `<style>${el.textContent}</style>`)
+      .join('\n');
+
+    // Collect all <link rel="stylesheet"> tags (e.g. fonts, global CSS)
+    const linkTags = Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
+    )
+      .map((el) => `<link rel="stylesheet" href="${el.href}">`)
+      .join('\n');
+
+    const win = window.open('', '_blank');
+    if (!win) return;
+
+    const printDoc = win.document;
+    printDoc.documentElement.innerHTML = `<head>
+<meta charset="utf-8">
+<title>Proposal</title>
+${linkTags}
+${styleBlocks}
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; padding: 40px; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @media print { body { padding: 0; } @page { margin: 0; } }
+</style>
+</head>
+<body>${html}</body>`;
+    win.focus();
+    // Give fonts/images time to load before printing
+    setTimeout(() => {
+      win.print();
+    }, 600);
+  }, []);
 
   return (
     <section className={styles.root}>
@@ -381,7 +428,11 @@ export const ProposalPreview = ({ meetingId, transcript }: ProposalPreviewProps)
           <button className={styles.iconBtn} aria-label="Edit proposal">
             <EditIcon />
           </button>
-          <button className={styles.iconBtn} aria-label="Download proposal">
+          <button
+            className={styles.iconBtn}
+            aria-label="Download proposal"
+            onClick={handleDownload}
+          >
             <DownloadIcon />
           </button>
         </div>
@@ -406,7 +457,7 @@ export const ProposalPreview = ({ meetingId, transcript }: ProposalPreviewProps)
         </div>
       )}
 
-      {!isLoading && !isError && data && <ProposalDocument data={data} />}
+      {!isLoading && !isError && data && <ProposalDocument data={data} docRef={docRef} />}
 
       {!isLoading && !isError && !data && !meetingId && (
         <div className={styles.emptyState}>

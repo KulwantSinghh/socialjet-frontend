@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { nurtureService } from '@/services/nurture.service';
 import type { NurturePeriod } from '@/types/nurture.types';
 
@@ -23,5 +23,60 @@ export function useNurtureDetail(leadId: string) {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     enabled: !!leadId,
+  });
+}
+
+export const emailNurtureKeys = {
+  history: (leadId: string) => ['email-nurture', 'history', leadId] as const,
+};
+
+export function useEmailHistory(leadId: string) {
+  return useQuery({
+    queryKey: emailNurtureKeys.history(leadId),
+    queryFn: () => nurtureService.getEmailHistory(leadId),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    enabled: !!leadId,
+  });
+}
+
+export function useGenerateDraft(leadId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (customInstructions?: string) =>
+      nurtureService.generateDraft(leadId, customInstructions),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: emailNurtureKeys.history(leadId) });
+    },
+  });
+}
+
+export function useApproveEmail(leadId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      emailId,
+      subject,
+      body,
+      cc,
+    }: {
+      emailId: string;
+      subject?: string;
+      body?: string;
+      cc?: string;
+    }) => nurtureService.approveEmail(emailId, { subject, body, cc }),
+    onSuccess: () => {
+      queryClient.refetchQueries({ queryKey: emailNurtureKeys.history(leadId) });
+    },
+  });
+}
+
+export function useDeleteDraft(leadId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (emailId: string) => nurtureService.deleteEmailDraft(emailId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: emailNurtureKeys.history(leadId) });
+    },
   });
 }

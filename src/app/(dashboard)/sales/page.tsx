@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import styles from './page.module.css';
 import { LeadChart } from '@/components/shared/LeadChart';
 import { ActivityFeed } from '@/components/shared/ActivityFeed';
@@ -24,16 +25,26 @@ export default function SalesDashboardPage() {
 
       {/* Stats Summary Row — data from /sales/dashboard */}
       <section className={styles.statsRow}>
-        <SalesDashboardStats />
+        <Suspense
+          fallback={[1, 2, 3, 4].map((i) => (
+            <div key={i} className={styles.statsSkeleton} />
+          ))}
+        >
+          <SalesDashboardStats />
+        </Suspense>
       </section>
 
       {/* Main Dashboard Grid */}
       <div className={styles.mainGrid}>
         <div className={styles.chartCol}>
-          <LeadChart />
+          <Suspense fallback={null}>
+            <LeadChart />
+          </Suspense>
         </div>
         <div className={styles.activityCol}>
-          <ActivityFeed />
+          <Suspense fallback={null}>
+            <ActivityFeed />
+          </Suspense>
         </div>
       </div>
     </div>

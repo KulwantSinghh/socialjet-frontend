@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import styles from './page.module.css';
 import { LeadCaptureStats } from './LeadCaptureStats';
 import { LeadAlert } from '@/components/shared/LeadAlert';
@@ -25,27 +26,37 @@ export default function LeadCapturePage() {
 
       {/* Top Banner Alert */}
       <section className={styles.alertSection}>
-        <LeadAlert />
+        <Suspense fallback={null}>
+          <LeadAlert />
+        </Suspense>
       </section>
 
       {/* Stats Summary Row */}
       <section className={styles.statsRow}>
-        <LeadCaptureStats />
+        <Suspense fallback={null}>
+          <LeadCaptureStats />
+        </Suspense>
       </section>
 
       {/* Charts Grid */}
       <div className={styles.chartsGrid}>
         <div className={styles.sourceCol}>
-          <SourceChart />
+          <Suspense fallback={null}>
+            <SourceChart />
+          </Suspense>
         </div>
         <div className={styles.funnelCol}>
-          <FunnelChart />
+          <Suspense fallback={null}>
+            <FunnelChart />
+          </Suspense>
         </div>
       </div>
 
       {/* Main Leads Table */}
       <section className={styles.tableSection}>
-        <LeadsTable />
+        <Suspense fallback={null}>
+          <LeadsTable />
+        </Suspense>
       </section>
     </div>
   );

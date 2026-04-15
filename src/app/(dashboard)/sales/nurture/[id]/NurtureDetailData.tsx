@@ -3,8 +3,24 @@
 import Link from 'next/link';
 import styles from './page.module.css';
 import { StatsCard } from '@/components/shared/StatsCard';
+import { EmailThread } from '@/components/shared/EmailThread';
 import { useNurtureDetail } from '@/hooks/useNurtureDashboard';
 import type { ConversationMessage } from '@/types/nurture.types';
+
+const FORM_SOURCES = new Set([
+  'webform',
+  'web_form',
+  'form',
+  'website',
+  'contact_form',
+  'landing_page',
+  'web',
+]);
+
+function isFormSource(source: string): boolean {
+  const s = source.toLowerCase().trim();
+  return FORM_SOURCES.has(s) || s.includes('form') || s.includes('web');
+}
 
 // ---- Icons ----
 
@@ -196,6 +212,7 @@ export function NurtureDetailData({ leadId }: { leadId: string }) {
   const stats = data?.stats;
   const messages = data?.conversation_log ?? [];
   const isWhatsApp = lead?.source === 'whatsapp';
+  const isForm = lead?.source ? isFormSource(lead.source) : false;
 
   // Skeleton breadcrumb fallback
   const displayName = isLoading ? '…' : (lead?.name ?? leadId);
@@ -338,23 +355,35 @@ export function NurtureDetailData({ leadId }: { leadId: string }) {
           <h2 className={styles.convTitle}>Conversation Log</h2>
         </div>
 
-        {isLoading && (
-          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '14px' }}>
-            Loading conversation…
-          </p>
-        )}
+        {isForm ? (
+          <EmailThread
+            leadId={leadId}
+            leadEmail={lead?.email ?? ''}
+            leadName={lead?.name ?? 'Lead'}
+          />
+        ) : (
+          <>
+            {isLoading && (
+              <p style={{ color: 'var(--color-text-tertiary)', fontSize: '14px' }}>
+                Loading conversation…
+              </p>
+            )}
 
-        {!isLoading && messages.length === 0 && (
-          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '14px' }}>No messages yet.</p>
-        )}
+            {!isLoading && messages.length === 0 && (
+              <p style={{ color: 'var(--color-text-tertiary)', fontSize: '14px' }}>
+                No messages yet.
+              </p>
+            )}
 
-        {!isLoading &&
-          messages.length > 0 &&
-          (isWhatsApp ? (
-            <WhatsAppChat messages={messages} leadName={lead?.name ?? 'Lead'} />
-          ) : (
-            <DefaultChat messages={messages} leadName={lead?.name ?? 'Lead'} />
-          ))}
+            {!isLoading &&
+              messages.length > 0 &&
+              (isWhatsApp ? (
+                <WhatsAppChat messages={messages} leadName={lead?.name ?? 'Lead'} />
+              ) : (
+                <DefaultChat messages={messages} leadName={lead?.name ?? 'Lead'} />
+              ))}
+          </>
+        )}
       </section>
     </>
   );

@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import styles from './page.module.css';
 import { NurtureDashboardData } from './NurtureDashboardData';
 
@@ -21,7 +22,9 @@ export default function NurturePage() {
       </header>
 
       {/* Stats + Funnel Chart + Nurture Agents — all from /nurture/dashboard */}
-      <NurtureDashboardData />
+      <Suspense fallback={null}>
+        <NurtureDashboardData />
+      </Suspense>
     </div>
   );
 }

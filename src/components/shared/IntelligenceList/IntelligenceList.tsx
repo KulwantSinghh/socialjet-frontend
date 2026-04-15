@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './IntelligenceList.module.css';
 import { cn } from '@/lib/utils';
@@ -176,20 +176,21 @@ function MeetingCard({
           <h4>
             {title} <span>— {subtitle}</span>
           </h4>
-          {meeting.meeting_status === 'done' && (
+          {meeting.has_transcript ? (
             <button className={styles.reviewBtn} onClick={() => onReview(meeting)}>
               Review
             </button>
-          )}
-          {meeting.meeting_status === 'upcoming' && meeting.zoom_join_url && (
-            <a
-              className={styles.joinZoomBtn}
-              href={meeting.zoom_join_url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Join Zoom
-            </a>
+          ) : (
+            meeting.zoom_join_url && (
+              <a
+                className={styles.joinZoomBtn}
+                href={meeting.zoom_join_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Join Zoom
+              </a>
+            )
           )}
         </div>
         <div className={styles.metadata}>
@@ -243,8 +244,14 @@ export const IntelligenceList = () => {
   const router = useRouter();
   const setSelectedCall = useCallStore((s) => s.setSelectedCall);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput), 250);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   const { data, isLoading } = useIntelligenceCalls({ days: 7, page, page_size: 30 });
   const calls = data?.calls ?? [];
@@ -318,8 +325,8 @@ export const IntelligenceList = () => {
             type="text"
             placeholder="Search"
             className={styles.searchInput}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
 

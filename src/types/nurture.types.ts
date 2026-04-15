@@ -75,6 +75,60 @@ export interface NurtureAgent {
   has_user_reply: boolean;
 }
 
+// ---- Email Nurture ----
+
+export type EmailStatus = 'draft' | 'pending_approval' | 'sent' | 'failed';
+
+export interface NurtureEmailAttachment {
+  name: string;
+  size: number;
+  url: string;
+  mime_type: string;
+}
+
+export interface NurtureEmail {
+  email_id: string;
+  lead_id: string;
+  subject: string;
+  final_subject?: string;
+  body: string;
+  final_body?: string;
+  cc?: string;
+  status: EmailStatus;
+  direction?: 'outbound' | 'inbound';
+  drafted_by?: string;
+  approved_by?: string;
+  lead_name?: string;
+  lead_email?: string;
+  lead_company?: string;
+  custom_instructions?: string;
+  previous_email_count?: number;
+  created_at: string;
+  updated_at?: string;
+  sent_at?: string;
+  attachments?: NurtureEmailAttachment[];
+}
+
+export interface EmailDraftRequest {
+  subject?: string;
+  body?: string;
+  cc?: string;
+}
+
+export interface EmailApproveRequest {
+  subject?: string;
+  body?: string;
+  cc?: string;
+}
+
+export interface NurtureEmailHistoryResponse {
+  lead_id?: string;
+  emails: NurtureEmail[];
+  total: number;
+  sent_count?: number;
+  draft_count?: number;
+}
+
 export interface NurtureDashboardResponse {
   stats: NurtureStats;
   conversion_funnel: Record<string, FunnelDay>;

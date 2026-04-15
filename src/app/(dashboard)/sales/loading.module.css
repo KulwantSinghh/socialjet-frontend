@@ -1,0 +1,118 @@
+/* ============================================================
+   Sales Overview — Loading Skeleton
+   Mirrors page.module.css layout exactly so there's zero shift
+   when the real page mounts.
+   ============================================================ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+/* ---- Header ---- */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.titleSkeleton {
+  height: 36px;
+  width: 220px;
+  border-radius: var(--radius-lg);
+}
+
+.subtitleSkeleton {
+  height: 18px;
+  width: 480px;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+/* ---- Stats Row ---- */
+.statsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.statCard {
+  flex: 1;
+  min-width: 200px;
+  height: 88px;
+  border-radius: var(--radius-2xl);
+}
+
+/* ---- Main Grid ---- */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.chartSkeleton {
+  height: 320px;
+  border-radius: var(--radius-2xl);
+}
+
+.activitySkeleton {
+  height: calc(100vh - var(--topbar-height) - var(--space-12) - 252px);
+  min-height: 320px;
+  border-radius: var(--radius-2xl);
+}
+
+/* ---- Shimmer animation (shared across all skeletons) ---- */
+.titleSkeleton,
+.subtitleSkeleton,
+.statCard,
+.chartSkeleton,
+.activitySkeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+[data-theme='dark'] .titleSkeleton,
+[data-theme='dark'] .subtitleSkeleton,
+[data-theme='dark'] .statCard,
+[data-theme='dark'] .chartSkeleton,
+[data-theme='dark'] .activitySkeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1200px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+  .activitySkeleton {
+    height: 480px;
+  }
+  .statsRow {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+  .activitySkeleton {
+    height: 420px;
+  }
+}

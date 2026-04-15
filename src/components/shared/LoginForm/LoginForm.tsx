@@ -2,9 +2,33 @@
 
 import { useState } from 'react';
 import styles from './LoginForm.module.css';
+import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useLogin } from '@/hooks/useAuth';
+
+const ROLE_OPTIONS = [
+  {
+    value: 'admin',
+    label: 'Admin',
+    description: 'Full access to all modules and settings.',
+  },
+  {
+    value: 'sales_team',
+    label: 'Sales Team',
+    description: 'Manage leads, pipeline, and deals.',
+  },
+  {
+    value: 'finance_team',
+    label: 'Finance Team',
+    description: 'Handle invoices, billing, and revenue.',
+  },
+  {
+    value: 'campaign_manager',
+    label: 'Campaign Manager',
+    description: 'Create and manage campaigns.',
+  },
+];
 
 export interface LoginFormProps {
   className?: string;
@@ -13,6 +37,7 @@ export interface LoginFormProps {
 export const LoginForm = ({ className }: LoginFormProps) => {
   const loginMutation = useLogin();
 
+  const [role, setRole] = useState('sales_team');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -170,9 +195,61 @@ export const LoginForm = ({ className }: LoginFormProps) => {
     </button>
   );
 
+  const roleIcon = (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M10 10C12.0711 10 13.75 8.32107 13.75 6.25C13.75 4.17893 12.0711 2.5 10 2.5C7.92893 2.5 6.25 4.17893 6.25 6.25C6.25 8.32107 7.92893 10 10 10Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 17.5C3.5 14.4 6.41 11.875 10 11.875C10.68 11.875 11.34 11.96 11.97 12.12"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17.5 14.375C17.5 14.725 17.44 15.0625 17.33 15.375C17.24 15.625 17.11 15.8625 16.95 16.075C16.46 16.7375 15.73 17.1875 14.895 17.3C14.73 17.325 14.56 17.3375 14.375 17.3375C13.815 17.3375 13.295 17.175 12.86 16.8875C12.595 16.7125 12.36 16.4875 12.17 16.225C11.78 15.7125 11.5625 15.075 11.5625 14.375C11.5625 13.4 11.98 12.525 12.64 11.925C13.2025 11.4125 13.9375 11.1 14.7375 11.1C15.495 11.1 16.185 11.375 16.7375 11.8375C17.2125 12.225 17.5625 12.75 17.735 13.35C17.8225 13.675 17.875 14.0125 17.875 14.375"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.3125 14.375H15.8125"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14.5625 13.1625V15.6625"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
   return (
     <form className={`${styles.root} ${className || ''}`} onSubmit={handleSubmit} id="login-form">
       {errorMsg && <div className={styles.errorMessage}>{errorMsg}</div>}
+
+      {/* Access Role */}
+      <div className={styles.field}>
+        <Select
+          label="Access Role"
+          options={ROLE_OPTIONS}
+          value={role}
+          onChange={setRole}
+          id="access-role"
+          icon={roleIcon}
+        />
+      </div>
 
       {/* Username */}
       <div className={styles.field}>
