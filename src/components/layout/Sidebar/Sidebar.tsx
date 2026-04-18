@@ -179,6 +179,145 @@ const SettingsIcon = () => (
   </svg>
 );
 
+const InboxIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M22 12h-6l-2 3h-4l-2-3H2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const MeetingsIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="3"
+      y="4"
+      width="18"
+      height="18"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M16 2v4M8 2v4M3 10h18"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const CheckCircleIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M22 11.08V12a10 10 0 1 1-5.93-9.14"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M22 4L12 14.01l-3-3"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const PipelineIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect
+      x="3"
+      y="3"
+      width="5"
+      height="18"
+      rx="1"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <rect
+      x="10"
+      y="6"
+      width="5"
+      height="15"
+      rx="1"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <rect
+      x="17"
+      y="9"
+      width="4"
+      height="12"
+      rx="1"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const LeadsIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle
+      cx="9"
+      cy="7"
+      r="4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ReportsIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M3 3v18h18M7 14l4-4 4 4 4-4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 const ChevronIcon = ({ open }: { open: boolean }) => (
   <svg
     width="20"
@@ -257,11 +396,16 @@ export const Sidebar = () => {
     if (currentRole === UserRole.Admin) {
       return [
         { type: 'link', label: 'Dashboard', path: '/admin', icon: <DashboardIcon /> },
+        { type: 'link', label: 'Approvals', path: '/admin/approvals', icon: <CheckCircleIcon /> },
         {
           type: 'accordion',
           label: 'Sales',
           icon: <SalesIcon />,
           subItems: [
+            { label: 'Inbox', path: '/admin/sales/inbox' },
+            { label: 'Leads', path: '/admin/sales/leads' },
+            { label: 'Meetings', path: '/admin/sales/meetings' },
+            { label: 'Approvals', path: '/admin/sales/meeting-requests' },
             { label: 'Lead Capture', path: '/admin/sales/lead-capture' },
             { label: 'Nurture', path: '/admin/sales/nurture' },
             { label: 'Sales Intelligence', path: '/admin/sales/intelligence' },
@@ -357,18 +501,20 @@ export const Sidebar = () => {
       return [{ type: 'link', label: 'Dashboard', path: '/client', icon: <DashboardIcon /> }];
     }
 
+    // Sales role: flat journey-oriented navigation
     return [
       { type: 'link', label: 'Dashboard', path: '/sales', icon: <DashboardIcon /> },
+      { type: 'link', label: 'Pipeline', path: '/sales/pipeline', icon: <PipelineIcon /> },
+      { type: 'link', label: 'Leads', path: '/sales/leads', icon: <LeadsIcon /> },
+      { type: 'link', label: 'Inbox', path: '/sales/inbox', icon: <InboxIcon /> },
+      { type: 'link', label: 'Meetings', path: '/sales/meetings', icon: <MeetingsIcon /> },
       {
-        type: 'accordion',
-        label: 'Sales',
-        icon: <SalesIcon />,
-        subItems: [
-          { label: 'Lead Capture', path: '/sales/lead-capture' },
-          { label: 'Nurture', path: '/sales/nurture' },
-          { label: 'Sales Intelligence', path: '/sales/intelligence' },
-        ],
+        type: 'link',
+        label: 'Approvals',
+        path: '/sales/meeting-requests',
+        icon: <CheckCircleIcon />,
       },
+      { type: 'link', label: 'Reports', path: '/sales/reports', icon: <ReportsIcon /> },
     ];
   }, [currentRole]);
 
@@ -396,11 +542,17 @@ export const Sidebar = () => {
       <nav className={styles.nav} style={{ overflowY: 'auto' }}>
         {navConfig.map((item) => {
           if (item.type === 'link') {
+            // Lead detail pages (/sales/leads/[id]) highlight Pipeline
+            const isLeadDetail = /^\/sales\/leads\/[^/]+/.test(pathname);
+            const isActive = isLeadDetail
+              ? item.path === '/sales/pipeline'
+              : pathname === item.path ||
+                (item.path !== '/sales' && pathname.startsWith(item.path + '/'));
             return (
               <Link
                 key={item.path || item.label}
                 href={item.path!}
-                className={cn(styles.navLink, pathname === item.path && styles.navLinkActive)}
+                className={cn(styles.navLink, isActive && styles.navLinkActive)}
               >
                 <div className={styles.navLinkContent}>
                   <span className={styles.iconWrapper}>{item.icon}</span>

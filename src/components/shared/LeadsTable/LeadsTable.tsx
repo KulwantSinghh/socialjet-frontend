@@ -78,7 +78,7 @@ function SkeletonRows() {
 
 function LeadRow({ lead }: { lead: Lead }) {
   const statusColor = STATUS_COLORS[lead.status] ?? '#8E95A2';
-  const sourceLabel = SOURCE_LABELS[lead.source] ?? capitalize(lead.source);
+  const sourceLabel = SOURCE_LABELS[lead.source] ?? (lead.source ? capitalize(lead.source) : '—');
 
   return (
     <tr>

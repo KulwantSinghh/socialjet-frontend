@@ -12,6 +12,7 @@ import { useAlertsStore } from '@/stores/alertsStore';
 import { useLeadAlerts } from '@/hooks/useLeadAlerts';
 import type { LeadAlert } from '@/types/leads.types';
 import { cn, formatRelativeTime, truncate } from '@/lib/utils';
+import { usePendingMeetingRequestsCount } from '@/hooks/useMeetingRequests';
 
 // ---- Icons ----
 const SearchIcon = () => (
@@ -328,6 +329,7 @@ export const Topbar = () => {
   const { role, logout } = useAuthStore();
   const { data: alertsData } = useLeadAlerts();
   const hasUnread = useAlertsStore((s) => s.hasUnread());
+  const pendingMeetingRequests = usePendingMeetingRequestsCount();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -388,7 +390,15 @@ export const Topbar = () => {
               >
                 <div className={styles.notificationWrapper}>
                   <BellIcon />
-                  {hasUnread && <span className={styles.dot} />}
+                  {(hasUnread || (pendingMeetingRequests.data ?? 0) > 0) && (
+                    <span className={styles.dot}>
+                      {(pendingMeetingRequests.data ?? 0) > 0 && (
+                        <span className={styles.meetingRequestCount}>
+                          {pendingMeetingRequests.data}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
               </button>
 

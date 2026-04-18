@@ -75,11 +75,22 @@
   position: absolute;
   top: 1px;
   right: 1px;
-  width: 8px;
+  min-width: 8px;
   height: 8px;
   background-color: #ff5a5f;
   border-radius: 50%;
   border: 2px solid var(--color-bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meetingRequestCount {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  padding: 0 2px;
 }
 
 /* ---- Separator ---- */
