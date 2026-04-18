@@ -686,9 +686,8 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cmd = (command: string, value?: string) => {
-    (document as any).execCommand(command, false, value ?? null);
+    document.execCommand(command, false, value);
   };
 
   const insertLink = () => {

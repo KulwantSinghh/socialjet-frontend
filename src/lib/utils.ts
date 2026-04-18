@@ -9,7 +9,7 @@
  * @example
  * cn(styles.root, isActive && styles.active, className)
  */
-export function cn(...classes: (string | undefined | null | false)[]): string {
+export function cn(...classes: (string | undefined | null | false | 0 | 0n)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
