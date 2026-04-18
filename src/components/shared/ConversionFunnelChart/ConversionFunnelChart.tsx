@@ -3,16 +3,33 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 import styles from './ConversionFunnelChart.module.css';
+import type { FunnelDay } from '@/types/nurture.types';
 
-const data = [
-  { day: 'Mon', sent: 1850, opened: 1400, clicked: 2000 },
-  { day: 'Tue', sent: 1200, opened: 900, clicked: 1150 },
-  { day: 'Wed', sent: 2150, opened: 1600, clicked: 2050 },
-  { day: 'Thu', sent: 1100, opened: 800, clicked: 1200 },
-  { day: 'Fri', sent: 2550, opened: 1900, clicked: 1900 },
-  { day: 'Sat', sent: 1600, opened: 1250, clicked: 1400 },
-  { day: 'Sun', sent: 1300, opened: 1000, clicked: 700 },
+interface ChartRow {
+  day: string;
+  new: number;
+  contacted: number;
+  qualified: number;
+  converted: number;
+}
+
+const FALLBACK_DATA: ChartRow[] = [
+  { day: 'Mon', new: 0, contacted: 0, qualified: 0, converted: 0 },
+  { day: 'Tue', new: 0, contacted: 0, qualified: 0, converted: 0 },
+  { day: 'Wed', new: 0, contacted: 0, qualified: 0, converted: 0 },
+  { day: 'Thu', new: 0, contacted: 0, qualified: 0, converted: 0 },
+  { day: 'Fri', new: 0, contacted: 0, qualified: 0, converted: 0 },
+  { day: 'Sat', new: 0, contacted: 0, qualified: 0, converted: 0 },
+  { day: 'Sun', new: 0, contacted: 0, qualified: 0, converted: 0 },
 ];
+
+function toChartData(funnel: Record<string, FunnelDay>): ChartRow[] {
+  return Object.entries(funnel).map(([day, vals]) => ({ day, ...vals }));
+}
+
+export interface ConversionFunnelChartProps {
+  conversionFunnel?: Record<string, FunnelDay>;
+}
 
 interface TooltipEntry {
   name?: string;
@@ -43,7 +60,9 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   return null;
 };
 
-export const ConversionFunnelChart = () => {
+export const ConversionFunnelChart = ({ conversionFunnel }: ConversionFunnelChartProps) => {
+  const data = conversionFunnel ? toChartData(conversionFunnel) : FALLBACK_DATA;
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
@@ -53,15 +72,19 @@ export const ConversionFunnelChart = () => {
       <div className={styles.legend}>
         <span className={styles.legendItem}>
           <span className={styles.legendDot} style={{ background: '#C4B5FD' }} />
-          Sent
+          New
         </span>
         <span className={styles.legendItem}>
           <span className={styles.legendDot} style={{ background: '#8B5CF6' }} />
-          Opened
+          Contacted
         </span>
         <span className={styles.legendItem}>
           <span className={styles.legendDot} style={{ background: '#3730A3' }} />
-          Clicked
+          Qualified
+        </span>
+        <span className={styles.legendItem}>
+          <span className={styles.legendDot} style={{ background: '#1E1B4B' }} />
+          Converted
         </span>
       </div>
 
@@ -85,22 +108,28 @@ export const ConversionFunnelChart = () => {
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#9CA3AF', fontFamily: 'Inter, sans-serif' }}
-              ticks={[0, 500, 1000, 1500, 2000, 2500]}
-              tickFormatter={(v: number) => (v === 0 ? '0' : `${v}`)}
+              tickFormatter={(v: number) => `${v}`}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99, 102, 241, 0.04)' }} />
-            <Bar dataKey="sent" name="Sent" fill="#C4B5FD" radius={[4, 4, 0, 0]} maxBarSize={22} />
+            <Bar dataKey="new" name="New" fill="#C4B5FD" radius={[4, 4, 0, 0]} maxBarSize={22} />
             <Bar
-              dataKey="opened"
-              name="Opened"
+              dataKey="contacted"
+              name="Contacted"
               fill="#8B5CF6"
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
             />
             <Bar
-              dataKey="clicked"
-              name="Clicked"
+              dataKey="qualified"
+              name="Qualified"
               fill="#3730A3"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={22}
+            />
+            <Bar
+              dataKey="converted"
+              name="Converted"
+              fill="#1E1B4B"
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
             />

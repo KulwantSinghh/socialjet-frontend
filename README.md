@@ -10,7 +10,7 @@ SocialJet is a high-performance, industry-standard CRM built for agency-scale in
 - **Sales Intelligence:** AI call analysis with automated transcript processing, discussion points extraction, and proposal generation.
 - **Dynamic Proposals:** High-fidelity, document-style proposal previews generated directly from AI insights.
 
-## 🏗️ Architecture 
+## 🏗️ Architecture
 
 This project follows a strict **Atomic/Modular Architecture** to ensure horizontal scalability:
 
@@ -62,7 +62,4 @@ This project follows a strict **Atomic/Modular Architecture** to ensure horizont
    npm run build
    ```
 
-
 ---
-
-

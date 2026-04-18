@@ -11,14 +11,15 @@ export interface User {
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface AuthResponse {
-  user: User;
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  token_type: string;
+  role: string;
+  refresh_token?: string;
 }
 
 export interface ForgotPasswordRequest {
@@ -29,4 +30,16 @@ export interface ResetPasswordRequest {
   token: string;
   password: string;
   confirmPassword: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  role: string;
+  email?: string;
+}
+
+export interface CreateUserResponse {
+  user_id: string;
+  username: string;
+  role: string;
 }

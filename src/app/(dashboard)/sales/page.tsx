@@ -1,9 +1,9 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import styles from './page.module.css';
-import { StatsCard } from '@/components/shared/StatsCard';
 import { LeadChart } from '@/components/shared/LeadChart';
 import { ActivityFeed } from '@/components/shared/ActivityFeed';
-import { AlertCard } from '@/components/shared/AlertCard';
+import { SalesDashboardStats } from './SalesDashboardStats';
 
 export const metadata: Metadata = {
   title: 'Sales Overview | SocialJet CRM',
@@ -23,47 +23,28 @@ export default function SalesDashboardPage() {
         </p>
       </header>
 
-      {/* Stats Summary Row */}
+      {/* Stats Summary Row — data from /sales/dashboard */}
       <section className={styles.statsRow}>
-        <StatsCard
-          label="New Leads"
-          value="24"
-          trend={12.2}
-          icon={<span style={{ fontSize: '1.2rem' }}>👤+</span>}
-        />
-        <StatsCard
-          label="Web Form"
-          value="24"
-          trend={-31.1}
-          icon={<span style={{ fontSize: '1.2rem' }}>🔄</span>}
-        />
-        <StatsCard
-          label="Calls Done"
-          value="48"
-          trend={12.2}
-          icon={<span style={{ fontSize: '1.2rem' }}>📞</span>}
-        />
-        <StatsCard
-          label="Conv. Rate"
-          value="156"
-          trend={-31.1}
-          icon={<span style={{ fontSize: '1.2rem' }}>📈</span>}
-        />
+        <Suspense
+          fallback={[1, 2, 3, 4].map((i) => (
+            <div key={i} className={styles.statsSkeleton} />
+          ))}
+        >
+          <SalesDashboardStats />
+        </Suspense>
       </section>
 
       {/* Main Dashboard Grid */}
       <div className={styles.mainGrid}>
-        {/* Main Column */}
         <div className={styles.chartCol}>
-          <LeadChart />
-          <div style={{ marginTop: 'var(--space-6)' }}>
-            <AlertCard />
-          </div>
+          <Suspense fallback={null}>
+            <LeadChart />
+          </Suspense>
         </div>
-
-        {/* Sidebar Column */}
         <div className={styles.activityCol}>
-          <ActivityFeed />
+          <Suspense fallback={null}>
+            <ActivityFeed />
+          </Suspense>
         </div>
       </div>
     </div>

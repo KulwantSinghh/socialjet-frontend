@@ -1,13 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import styles from './LoginForm.module.css';
 import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { useLogin } from '@/hooks/useAuth';
 
 const ROLE_OPTIONS = [
+  {
+    value: 'admin',
+    label: 'Admin',
+    description: 'Full access to all modules and settings.',
+  },
   {
     value: 'sales_team',
     label: 'Sales Team',
@@ -29,49 +34,36 @@ export interface LoginFormProps {
   className?: string;
 }
 
-export const LoginForm = () => {
-  const router = useRouter();
+export const LoginForm = ({ className }: LoginFormProps) => {
+  const loginMutation = useLogin();
+
   const [role, setRole] = useState('sales_team');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // DUMMY AUTH: Setting cookies for middleware to allow access
-    // This is temporary until backend integration
-    document.cookie = `socialjet_access_token=dummy_token; path=/; max-age=3600`;
-
-    // Map dropdown value to middleware role name
-    const roleMapping: Record<string, string> = {
-      sales_team: 'sales',
-      finance_team: 'finance',
-      campaign_manager: 'campaign_manager',
-    };
-
-    const middlewareRole = roleMapping[role] || 'sales';
-    document.cookie = `socialjet_user_role=${middlewareRole}; path=/; max-age=3600`;
-
-    // Redirect to the role's default dashboard
-    const pathMap: Record<string, string> = {
-      sales_team: '/sales',
-      finance_team: '/finance',
-      campaign_manager: '/campaigns',
-    };
-
-    const targetPath = pathMap[role] || '/sales';
-
-    // Small delay to simulate login
-    setTimeout(() => {
-      router.push(targetPath);
-      setIsLoading(false);
-    }, 800);
+    setErrorMsg('');
+    loginMutation.mutate(
+      { username, password },
+      {
+        onError: (error: unknown) => {
+          const axiosError = error as {
+            response?: { data?: { detail?: { msg?: string }[]; message?: string } };
+          };
+          const msg =
+            axiosError?.response?.data?.detail?.[0]?.msg ||
+            axiosError?.response?.data?.message ||
+            'Login failed. Please check your credentials.';
+          setErrorMsg(msg);
+        },
+      }
+    );
   };
 
-  const emailIcon = (
+  const usernameIcon = (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M14.1667 17.0833H5.83333C3.33333 17.0833 1.66667 15.8333 1.66667 12.9167V7.08333C1.66667 4.16667 3.33333 2.91667 5.83333 2.91667H14.1667C16.6667 2.91667 18.3333 4.16667 18.3333 7.08333V12.9167C18.3333 15.8333 16.6667 17.0833 14.1667 17.0833Z"
@@ -244,7 +236,9 @@ export const LoginForm = () => {
   );
 
   return (
-    <form className={styles.root} onSubmit={handleSubmit} id="login-form">
+    <form className={`${styles.root} ${className || ''}`} onSubmit={handleSubmit} id="login-form">
+      {errorMsg && <div className={styles.errorMessage}>{errorMsg}</div>}
+
       {/* Access Role */}
       <div className={styles.field}>
         <Select
@@ -257,17 +251,17 @@ export const LoginForm = () => {
         />
       </div>
 
-      {/* Email Address */}
+      {/* Username */}
       <div className={styles.field}>
         <Input
-          label="Email Address"
-          id="email-address"
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          leftIcon={emailIcon}
+          label="Username"
+          id="username"
+          type="text"
+          placeholder="Enter your username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
+          leftIcon={usernameIcon}
         />
       </div>
 
@@ -298,7 +292,7 @@ export const LoginForm = () => {
         type="submit"
         fullWidth
         size="lg"
-        isLoading={isLoading}
+        isLoading={loginMutation.isPending}
         className={styles.submitButton}
         id="sign-in-button"
       >

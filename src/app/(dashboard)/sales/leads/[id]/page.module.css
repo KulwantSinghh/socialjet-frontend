@@ -1,0 +1,6 @@
+.root {
+  height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

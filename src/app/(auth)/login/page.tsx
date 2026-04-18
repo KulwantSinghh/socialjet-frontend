@@ -1,5 +1,10 @@
-import { LoginForm } from '@/components/shared/LoginForm';
+'use client';
 
-export default function LoginPage() {
+import { LoginForm } from '@/components/shared/LoginForm';
+import { withGuest } from '@/hoc/withGuest';
+
+function LoginPage() {
   return <LoginForm />;
 }
+
+export default withGuest(LoginPage);

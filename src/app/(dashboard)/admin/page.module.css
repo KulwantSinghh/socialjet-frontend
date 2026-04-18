@@ -1,0 +1,75 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+/* Welcome */
+.welcomeSection {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.welcomeTitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-1);
+}
+
+.welcomeSubtitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* Stats */
+.statsRow {
+  display: flex;
+  gap: var(--space-4);
+}
+
+/* Charts */
+.chartsRow {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.healthChartWrapper,
+.revenueChartWrapper {
+  min-width: 0;
+}
+
+/* Tasks + Feed */
+.tasksRow {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.tasksWrapper,
+.feedWrapper {
+  min-width: 0;
+}
+
+/* Pipeline */
+.pipelineRow {
+  width: 100%;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: var(--space-4) 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  border-top: 1px solid var(--color-border-default);
+}

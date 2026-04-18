@@ -11,6 +11,7 @@ export const ENDPOINTS = {
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
     ME: '/auth/me',
+    CREATE_USER: '/auth/users',
   },
 
   USERS: {
@@ -22,12 +23,22 @@ export const ENDPOINTS = {
   },
 
   LEADS: {
-    LIST: '/leads',
+    LIST: '/leads/',
     DETAIL: (id: string) => `/leads/${id}`,
-    CREATE: '/leads',
+    CREATE: '/leads/',
+    WEBFORM: '/leads/webform',
     UPDATE: (id: string) => `/leads/${id}`,
     DELETE: (id: string) => `/leads/${id}`,
     CONVERT: (id: string) => `/leads/${id}/convert`,
+    STATUS: (id: string) => `/leads/${id}/status`,
+    TIMELINE: (id: string) => `/leads/${id}/timeline`,
+    MEETINGS: (id: string) => `/leads/${id}/meetings`,
+    MARK_DEAD: (id: string) => `/leads/${id}/dead`,
+    SEQUENCE_PAUSE: (id: string) => `/leads/${id}/sequence/pause`,
+    SEQUENCE_RESUME: (id: string) => `/leads/${id}/sequence/resume`,
+    ALERTS: '/leads/alerts',
+    STATS: '/leads/stats',
+    FUNNEL: '/leads/funnel',
   },
 
   PIPELINE: {
@@ -62,6 +73,8 @@ export const ENDPOINTS = {
   },
 
   NURTURE: {
+    DASHBOARD: '/nurture/dashboard',
+    DETAIL: (leadId: string) => `/nurture/${leadId}/detail`,
     SEQUENCES: '/nurture/sequences',
     AGENTS: '/nurture/agents',
     AGENT_DETAIL: (id: string) => `/nurture/agents/${id}`,
@@ -69,8 +82,19 @@ export const ENDPOINTS = {
     REPLY: (id: string) => `/nurture/agents/${id}/reply`,
   },
 
+  EMAIL_NURTURE: {
+    DRAFT: (leadId: string) => `/email/nurture/${leadId}/draft`,
+    APPROVE: (emailId: string) => `/email/nurture/emails/${emailId}/approve`,
+    APPROVAL_QUEUE: '/email/nurture/approval-queue',
+    HISTORY: (leadId: string) => `/email/nurture/${leadId}/history`,
+    LIST: '/email/nurture/emails',
+    DETAIL: (emailId: string) => `/email/nurture/emails/${emailId}`,
+    DELETE: (emailId: string) => `/email/nurture/emails/${emailId}`,
+  },
+
   NOTIFICATIONS: {
     LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
     MARK_READ: (id: string) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/read-all',
   },
@@ -79,5 +103,69 @@ export const ENDPOINTS = {
     SALES: '/reports/sales',
     CAMPAIGNS: '/reports/campaigns',
     FINANCE: '/reports/finance',
+  },
+
+  SALES: {
+    VELOCITY: '/sales/velocity',
+    ACTIVITY: '/sales/activity',
+    DASHBOARD: '/sales/dashboard',
+  },
+
+  APPROVALS: {
+    PENDING: '/sales/intelligence/calls',
+    APPROVE: (callId: string) => `/sales/intelligence/calls/${callId}/approve`,
+    REJECT: (callId: string) => `/sales/intelligence/calls/${callId}/reject`,
+  },
+
+  INTELLIGENCE: {
+    CALLS: '/sales/intelligence/calls',
+    STATS: '/sales/intelligence/stats',
+    REVIEW: (callId: string) => `/sales/intelligence/calls/${callId}/review`,
+    MEETING_SUMMARY: '/sales/intelligence/meeting-summary',
+    ANALYZE: '/sales/intelligence/analyze',
+    TRANSCRIPT: (meetingId: string) => `/meetings/${meetingId}/transcript`,
+    REPORT: (meetingId: string) => `/meetings/${meetingId}/report`,
+    REGENERATE_REPORT: (meetingId: string) => `/meetings/${meetingId}/report/regenerate`,
+    PROPOSAL_BY_MEETING: (meetingId: string) =>
+      `/sales/intelligence/proposals/by-meeting/${meetingId}`,
+    UPDATE_PROPOSAL: (callId: string) => `/sales/intelligence/proposals/${callId}`,
+    SUBMIT_PROPOSAL: (callId: string) => `/sales/intelligence/proposals/${callId}/submit`,
+  },
+
+  MEETINGS: {
+    LIST: '/meetings/',
+    DETAIL: (id: string) => `/meetings/${id}`,
+    INSTANT: '/meetings/instant',
+    TRANSCRIPT: (id: string) => `/meetings/${id}/transcript`,
+    REPORT: (id: string) => `/meetings/${id}/report`,
+    RESCHEDULE: (id: string) => `/meetings/${id}/reschedule`,
+    CANCEL: (id: string) => `/meetings/${id}/cancel`,
+    CHECK_AVAILABILITY: '/meetings/check-availability',
+  },
+
+  MEETING_REQUESTS: {
+    LIST: '/meeting-requests',
+    CONFIRM: (id: string) => `/meeting-requests/${id}/confirm`,
+    DECLINE: (id: string) => `/meeting-requests/${id}/decline`,
+  },
+
+  PROPOSALS: {
+    LIST: '/proposals',
+    DETAIL: (id: string) => `/proposals/${id}`,
+    UPDATE: (id: string) => `/proposals/${id}`,
+    APPROVE: (id: string) => `/proposals/${id}/approve`,
+    SEND: (id: string) => `/proposals/${id}/send`,
+  },
+
+  INBOX: {
+    LIST: '/inbox',
+    CONVERSATION: (leadId: string) => `/inbox/${leadId}`,
+    SEND: (leadId: string) => `/inbox/${leadId}/send`,
+    PAUSE_AUTOMATION: (leadId: string) => `/inbox/${leadId}/automation/pause`,
+    RESUME_AUTOMATION: (leadId: string) => `/inbox/${leadId}/automation/resume`,
+  },
+
+  WHATSAPP: {
+    SEND: (leadId: string) => `/leads/${leadId}/whatsapp`,
   },
 } as const;

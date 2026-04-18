@@ -1,12 +1,8 @@
 import type { Metadata } from 'next';
+import { PipelineBoard } from './PipelineBoard';
 
-export const metadata: Metadata = { title: 'Pipeline' };
+export const metadata: Metadata = { title: 'Pipeline | SocialJet CRM' };
 
 export default function PipelinePage() {
-  return (
-    <div>
-      <h1>Pipeline</h1>
-      <p>Sales pipeline / Kanban board will be displayed here.</p>
-    </div>
-  );
+  return <PipelineBoard />;
 }

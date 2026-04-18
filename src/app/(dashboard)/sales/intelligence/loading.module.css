@@ -1,0 +1,86 @@
+/* ============================================================
+   Sales Intelligence — Loading Skeleton
+   ============================================================ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.titleSkeleton {
+  height: 36px;
+  width: 280px;
+  border-radius: var(--radius-lg);
+}
+
+.subtitleSkeleton {
+  height: 18px;
+  width: 400px;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.statCard {
+  height: 88px;
+  border-radius: var(--radius-2xl);
+}
+
+.listSkeleton {
+  width: 100%;
+  height: 480px;
+  border-radius: var(--radius-2xl);
+}
+
+/* Shimmer */
+.titleSkeleton,
+.subtitleSkeleton,
+.statCard,
+.listSkeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+[data-theme='dark'] .titleSkeleton,
+[data-theme='dark'] .subtitleSkeleton,
+[data-theme='dark'] .statCard,
+[data-theme='dark'] .listSkeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+@media (max-width: 1200px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}

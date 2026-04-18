@@ -1,0 +1,388 @@
+/* ── Wrapper ───────────────────────────────────────────────────────── */
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f1f0fb;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  border: 1px solid var(--color-border-default);
+}
+
+/* ── Toolbar ───────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--color-border-default);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  row-gap: 4px;
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border-default);
+  margin: 0 5px;
+  flex-shrink: 0;
+}
+
+.toolbarBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.toolbarBtn:hover:not(:disabled) {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.toolbarBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.toolbarBtnActive {
+  background: #ede9fe;
+  color: var(--color-brand-purple);
+}
+
+.toolbarBtnActive:hover {
+  background: #ddd6fe;
+  color: var(--color-brand-purple);
+}
+
+.toolbarSelect {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  background: white;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  min-width: 80px;
+}
+
+.toolbarSelect:focus {
+  border-color: var(--color-brand-purple);
+}
+
+.hiddenColorInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Page wrap (scrollable document area) ──────────────────────────── */
+.pageWrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 24px 60px;
+  background: #f1f0fb;
+}
+
+/* ── A4 page ───────────────────────────────────────────────────────── */
+.page {
+  width: 794px; /* A4 at 96 dpi */
+  min-height: 1123px; /* A4 height at 96 dpi */
+  margin: 0 auto;
+  background: white;
+  padding: 90px 90px;
+  box-shadow:
+    0 2px 20px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+/* ── ProseMirror content styles ────────────────────────────────────── */
+.editorContent :global(.ProseMirror) {
+  outline: none;
+  min-height: 600px;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+
+.editorContent :global(.ProseMirror p) {
+  margin: 0 0 10px 0;
+}
+
+.editorContent :global(.ProseMirror h1) {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+}
+
+.editorContent :global(.ProseMirror h2) {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-brand-purple);
+  margin: 32px 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #ede9fe;
+}
+
+.editorContent :global(.ProseMirror h3) {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  margin: 16px 0 5px 0;
+}
+
+.editorContent :global(.ProseMirror h4) {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4b5563;
+  margin: 12px 0 4px 0;
+}
+
+.editorContent :global(.ProseMirror ul) {
+  padding-left: 20px;
+  margin: 0 0 12px 0;
+  list-style-type: disc;
+}
+
+.editorContent :global(.ProseMirror ol) {
+  padding-left: 20px;
+  margin: 0 0 12px 0;
+  list-style-type: decimal;
+}
+
+.editorContent :global(.ProseMirror li) {
+  margin-bottom: 5px;
+  line-height: 1.65;
+}
+
+.editorContent :global(.ProseMirror li p) {
+  margin: 0;
+}
+
+.editorContent :global(.ProseMirror blockquote) {
+  border-left: 3px solid #ede9fe;
+  margin: 0 0 12px 0;
+  padding: 8px 0 8px 16px;
+  color: #4b5563;
+  font-style: italic;
+}
+
+.editorContent :global(.ProseMirror blockquote p) {
+  margin: 0;
+}
+
+.editorContent :global(.ProseMirror code) {
+  background: #f3f4f6;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.9em;
+  color: #374151;
+}
+
+.editorContent :global(.ProseMirror pre) {
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 0 0 12px 0;
+  overflow-x: auto;
+}
+
+.editorContent :global(.ProseMirror pre code) {
+  background: none;
+  padding: 0;
+}
+
+.editorContent :global(.ProseMirror hr) {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 24px 0;
+}
+
+.editorContent :global(.ProseMirror img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+.editorContent :global(.ProseMirror img.ProseMirror-selectednode) {
+  outline: 2px solid var(--color-brand-purple);
+  outline-offset: 2px;
+}
+
+.editorContent :global(.ProseMirror a) {
+  color: var(--color-brand-purple);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.editorContent :global(.ProseMirror strong) {
+  font-weight: 700;
+}
+
+.editorContent :global(.ProseMirror em) {
+  font-style: italic;
+}
+
+.editorContent :global(.ProseMirror u) {
+  text-decoration: underline;
+}
+
+.editorContent :global(.ProseMirror s) {
+  text-decoration: line-through;
+}
+
+/* Text align */
+.editorContent :global(.ProseMirror [style*='text-align: left']) {
+  text-align: left;
+}
+.editorContent :global(.ProseMirror [style*='text-align: center']) {
+  text-align: center;
+}
+.editorContent :global(.ProseMirror [style*='text-align: right']) {
+  text-align: right;
+}
+.editorContent :global(.ProseMirror [style*='text-align: justify']) {
+  text-align: justify;
+}
+
+/* Placeholder */
+.editorContent :global(.ProseMirror p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  color: #d1d5db;
+  pointer-events: none;
+  height: 0;
+}
+
+/* ── Link dialog ───────────────────────────────────────────────────── */
+.linkDialogBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: var(--z-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.linkDialog {
+  background: white;
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: var(--shadow-xl);
+}
+
+.linkDialogTitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.linkDialogInput {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: 0 var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.linkDialogInput:focus {
+  border-color: var(--color-brand-purple);
+}
+
+.linkDialogActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  justify-content: flex-end;
+}
+
+.linkDialogRemove {
+  margin-right: auto;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-error-500);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.linkDialogCancel {
+  background: none;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--space-1-5) var(--space-4);
+  font-weight: 500;
+}
+
+.linkDialogApply {
+  background: var(--color-brand-purple);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: white;
+  cursor: pointer;
+  padding: var(--space-1-5) var(--space-4);
+  font-weight: 600;
+}

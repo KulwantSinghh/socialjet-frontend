@@ -8,6 +8,8 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://loca
 
 export const AUTH_TOKEN_KEY = 'socialjet_access_token';
 export const REFRESH_TOKEN_KEY = 'socialjet_refresh_token';
+/** Zustand `persist` storage key — must be cleared with tokens on auth failure to avoid proxy ↔ login loops. */
+export const AUTH_STORE_STORAGE_KEY = 'socialjet-auth';
 
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;

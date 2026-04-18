@@ -3,52 +3,23 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import styles from './NurtureAgents.module.css';
+import type { NurtureAgent as ApiNurtureAgent } from '@/types/nurture.types';
 
-export interface NurtureAgent {
-  id: string;
-  brand: string;
-  contact: string;
-  message: string;
-  timeAgo: string;
+export interface NurtureAgentsProps {
+  agents?: ApiNurtureAgent[];
+  isLoading?: boolean;
 }
 
-const NURTURE_AGENTS_DATA: NurtureAgent[] = [
-  {
-    id: '1',
-    brand: 'Nykaa Beauty',
-    contact: 'Priya Sharma',
-    message: 'Hi Priya, following up on your inquiry about our influencer campaign packages...',
-    timeAgo: '2 hrs ago',
-  },
-  {
-    id: '2',
-    brand: 'Mamaearth',
-    contact: 'Ghazal Alagh',
-    message: 'Sounds promising! Let me check with the team and get back to you.',
-    timeAgo: '2 hrs ago',
-  },
-  {
-    id: '3',
-    brand: 'Mamaearth',
-    contact: 'Ghazal Alagh',
-    message: 'Sounds promising! Let me check with the team and get back to you.',
-    timeAgo: '2 hrs ago',
-  },
-  {
-    id: '4',
-    brand: 'Nykaa Beauty',
-    contact: 'Priya Sharma',
-    message: 'Hi Priya, following up on your inquiry about our influencer campaign packages...',
-    timeAgo: '5 hrs ago',
-  },
-  {
-    id: '5',
-    brand: 'Wow Skin Science',
-    contact: 'Karan Bajaj',
-    message: 'We are interested in a long-term partnership. Can you share the pricing deck?',
-    timeAgo: '1 day ago',
-  },
-];
+function relativeTime(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hr${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
 
 const SearchIcon = () => (
   <svg
@@ -102,14 +73,14 @@ const ListIcon = () => (
   </svg>
 );
 
-export const NurtureAgents = () => {
+export const NurtureAgents = ({ agents = [], isLoading = false }: NurtureAgentsProps) => {
   const [query, setQuery] = useState('');
 
-  const filtered = NURTURE_AGENTS_DATA.filter(
+  const filtered = agents.filter(
     (a) =>
-      a.brand.toLowerCase().includes(query.toLowerCase()) ||
-      a.contact.toLowerCase().includes(query.toLowerCase()) ||
-      a.message.toLowerCase().includes(query.toLowerCase())
+      a.name.toLowerCase().includes(query.toLowerCase()) ||
+      (a.company ?? '').toLowerCase().includes(query.toLowerCase()) ||
+      a.last_message.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -145,31 +116,35 @@ export const NurtureAgents = () => {
 
       {/* Agent List */}
       <div className={styles.list}>
-        {filtered.length === 0 ? (
+        {isLoading && <p className={styles.empty}>Loading…</p>}
+
+        {!isLoading && filtered.length === 0 && (
           <p className={styles.empty}>No nurture agents found.</p>
-        ) : (
+        )}
+
+        {!isLoading &&
           filtered.map((agent) => (
-            <div key={agent.id} className={styles.card}>
+            <div key={agent.lead_id} className={styles.card}>
               <div className={styles.cardMain}>
                 <div className={styles.cardContent}>
                   <p className={styles.cardTitle}>
-                    {agent.brand}: <span>{agent.contact}</span>
+                    {agent.company ? `${agent.company}: ` : ''}
+                    <span>{agent.name}</span>
                   </p>
-                  <p className={styles.cardMessage}>{agent.message}</p>
-                  <Link href={`/sales/nurture/${agent.id}`} className={styles.reviewBtn}>
+                  <p className={styles.cardMessage}>{agent.last_message}</p>
+                  <Link href={`/sales/nurture/${agent.lead_id}`} className={styles.reviewBtn}>
                     Review
                   </Link>
                 </div>
                 <div className={styles.cardMeta}>
                   <span className={styles.timeBadge}>
                     <ClockIcon />
-                    {agent.timeAgo}
+                    {relativeTime(agent.last_nurture_at)}
                   </span>
                 </div>
               </div>
             </div>
-          ))
-        )}
+          ))}
       </div>
     </div>
   );

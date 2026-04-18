@@ -69,6 +69,12 @@
 
 .chartWrapper {
   width: 100%;
+  transition: opacity var(--transition-base);
+}
+
+.chartFetching {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .legendContainer {

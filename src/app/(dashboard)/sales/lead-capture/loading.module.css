@@ -1,0 +1,124 @@
+/* ============================================================
+   Lead Capture — Loading Skeleton
+   ============================================================ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  padding-bottom: var(--space-10);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.titleSkeleton {
+  height: 36px;
+  width: 220px;
+  border-radius: var(--radius-lg);
+}
+
+.subtitleSkeleton {
+  height: 18px;
+  width: 460px;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.alertSkeleton {
+  width: 100%;
+  height: 56px;
+  border-radius: var(--radius-xl);
+}
+
+.statsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.statCard {
+  flex: 1;
+  min-width: 160px;
+  height: 88px;
+  border-radius: var(--radius-2xl);
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr;
+  gap: var(--space-6);
+}
+
+.chartSmall {
+  height: 280px;
+  border-radius: var(--radius-2xl);
+}
+
+.chartLarge {
+  height: 280px;
+  border-radius: var(--radius-2xl);
+}
+
+.tableSkeleton {
+  width: 100%;
+  height: 340px;
+  border-radius: var(--radius-2xl);
+}
+
+/* Shimmer */
+.titleSkeleton,
+.subtitleSkeleton,
+.alertSkeleton,
+.statCard,
+.chartSmall,
+.chartLarge,
+.tableSkeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+[data-theme='dark'] .titleSkeleton,
+[data-theme='dark'] .subtitleSkeleton,
+[data-theme='dark'] .alertSkeleton,
+[data-theme='dark'] .statCard,
+[data-theme='dark'] .chartSmall,
+[data-theme='dark'] .chartLarge,
+[data-theme='dark'] .tableSkeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+@media (max-width: 1280px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .statsRow {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+}

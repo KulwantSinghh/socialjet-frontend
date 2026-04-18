@@ -48,6 +48,28 @@
   border-radius: var(--radius-md) !important;
 }
 
+.filterSelect {
+  height: 38px;
+  padding: 0 var(--space-3);
+  background-color: #f8f9fa;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  appearance: none;
+  padding-right: var(--space-7);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238e95a2' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  outline: none;
+}
+
+.filterSelect:focus {
+  border-color: #4b39ef;
+}
+
 .newLeadBtn {
   background-color: #4b39ef !important;
   color: white !important;
@@ -125,6 +147,38 @@
 
 .table tr:hover {
   background-color: #fdfdff;
+}
+
+/* ---- Skeleton ---- */
+.skeletonRow td {
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.skeletonCell {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ---- Empty state ---- */
+.emptyState {
+  text-align: center;
+  padding: var(--space-12) var(--space-6) !important;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
 }
 
 .table td {

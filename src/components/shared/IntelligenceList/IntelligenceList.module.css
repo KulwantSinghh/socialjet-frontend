@@ -191,12 +191,35 @@
   border-radius: var(--radius-lg);
   padding: var(--space-2) var(--space-4);
   text-decoration: none;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .reviewBtn:hover {
   background-color: #f1f5f9;
   border-color: #cbd5e1;
+}
+
+.joinZoomBtn {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: white;
+  background-color: #2d8cff;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-4);
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.joinZoomBtn:hover {
+  opacity: 0.88;
+}
+
+.calendarIconSmall {
+  color: var(--color-text-tertiary);
 }
 
 .description {

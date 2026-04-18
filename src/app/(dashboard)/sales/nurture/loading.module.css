@@ -1,0 +1,100 @@
+/* ============================================================
+   Nurture — Loading Skeleton
+   ============================================================ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+  padding-bottom: var(--space-10);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.titleSkeleton {
+  height: 36px;
+  width: 200px;
+  border-radius: var(--radius-lg);
+}
+
+.subtitleSkeleton {
+  height: 18px;
+  width: 420px;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+/* Stats */
+.statsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.statCard {
+  flex: 1;
+  min-width: 180px;
+  height: 88px;
+  border-radius: var(--radius-2xl);
+}
+
+/* Chart & Agents */
+.chartSkeleton {
+  width: 100%;
+  height: 300px;
+  border-radius: var(--radius-2xl);
+}
+
+.agentsSkeleton {
+  width: 100%;
+  height: 260px;
+  border-radius: var(--radius-2xl);
+}
+
+/* Shimmer */
+.titleSkeleton,
+.subtitleSkeleton,
+.statCard,
+.chartSkeleton,
+.agentsSkeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+[data-theme='dark'] .titleSkeleton,
+[data-theme='dark'] .subtitleSkeleton,
+[data-theme='dark'] .statCard,
+[data-theme='dark'] .chartSkeleton,
+[data-theme='dark'] .agentsSkeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 200% 100%;
+}
+
+@media (max-width: 1024px) {
+  .statsRow {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .statsRow {
+    grid-template-columns: 1fr;
+  }
+}
