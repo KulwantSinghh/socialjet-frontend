@@ -113,8 +113,9 @@ export const ENDPOINTS = {
 
   APPROVALS: {
     PENDING: '/sales/intelligence/calls',
-    APPROVE: (callId: string) => `/sales/intelligence/calls/${callId}/approve`,
-    REJECT: (callId: string) => `/sales/intelligence/calls/${callId}/reject`,
+    APPROVE: (callId: string) => `/sales/intelligence/proposals/${callId}/approve`,
+    REJECT: (callId: string) => `/sales/intelligence/proposals/${callId}/reject`,
+    SEND_EMAIL: (callId: string) => `/sales/intelligence/proposals/${callId}/send-email`,
   },
 
   INTELLIGENCE: {

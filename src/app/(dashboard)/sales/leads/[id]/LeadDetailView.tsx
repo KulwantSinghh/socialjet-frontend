@@ -16,6 +16,7 @@ import type { Meeting, AvailabilityCheckResponse } from '@/types/meeting.types';
 import type { SalesAnalysis } from '@/types/intelligence.types';
 import { MEETING_TYPE_LABELS } from '@/types/meeting.types';
 import { TIMELINE_EVENT_LABELS } from '@/types/timeline.types';
+import { generateProposalHTML, generateProposalPageHTML } from '@/lib/generateProposalHTML';
 
 // ─── Journey stages ───────────────────────────────────────────────────────────
 const JOURNEY_STAGES = [
@@ -425,122 +426,6 @@ function MeetingCard({
 }
 
 // ─── Meeting Analysis Card ────────────────────────────────────────────────────
-// ─── Editor toolbar icons ─────────────────────────────────────────────────────
-const BoldIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M6 4h8a4 4 0 0 1 0 8H6zm0 8h9a4 4 0 0 1 0 8H6z" />
-  </svg>
-);
-const ItalicIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-    <line
-      x1="19"
-      y1="4"
-      x2="10"
-      y2="4"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    <line
-      x1="14"
-      y1="20"
-      x2="5"
-      y2="20"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-    <line
-      x1="15"
-      y1="4"
-      x2="9"
-      y2="20"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-const UnderlineIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  >
-    <path d="M6 3v7a6 6 0 0 0 12 0V3" />
-    <line x1="4" y1="21" x2="20" y2="21" />
-  </svg>
-);
-const LinkIconTb = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  >
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
-const ImageIconTb = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  >
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <circle cx="8.5" cy="8.5" r="1.5" />
-    <polyline points="21 15 16 10 5 21" />
-  </svg>
-);
-const ListIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  >
-    <line x1="9" y1="6" x2="20" y2="6" />
-    <line x1="9" y1="12" x2="20" y2="12" />
-    <line x1="9" y1="18" x2="20" y2="18" />
-    <circle cx="4" cy="6" r="1" fill="currentColor" />
-    <circle cx="4" cy="12" r="1" fill="currentColor" />
-    <circle cx="4" cy="18" r="1" fill="currentColor" />
-  </svg>
-);
-const OListIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-  >
-    <line x1="10" y1="6" x2="21" y2="6" />
-    <line x1="10" y1="12" x2="21" y2="12" />
-    <line x1="10" y1="18" x2="21" y2="18" />
-    <path d="M4 6h1v4" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M4 10h2" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" stroke="currentColor" strokeWidth="1.5" />
-  </svg>
-);
 const DownloadIcon = () => (
   <svg
     width="14"
@@ -596,11 +481,11 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [editDraft, setEditDraft] = useState<Partial<SalesAnalysis>>({});
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // On mount: try to load existing proposal first
   useEffect(() => {
@@ -637,7 +522,8 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
     try {
       const { data } = await apiClient.post<{ proposal: SalesAnalysis; call_id?: string }>(
         ENDPOINTS.INTELLIGENCE.ANALYZE,
-        { meeting_id: meeting.meeting_id }
+        { meeting_id: meeting.meeting_id },
+        { timeout: 300000 }
       );
       setAnalysis(data.proposal);
       if (data.call_id) setCallId(data.call_id);
@@ -649,20 +535,23 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
   };
 
   const saveEdits = async () => {
-    if (!callId) return;
+    if (!callId || !analysis) return;
     setSaving(true);
     setError(null);
     try {
+      const merged = { ...analysis, ...editDraft };
       const body: Record<string, unknown> = {
         proposal_status: 'revised',
-        call_summary: analysis?.call_summary ?? '',
-        client_needs: analysis?.client_needs ?? '',
-        campaign_objective: analysis?.campaign_objective ?? '',
-        proposal: analysis ?? {},
+        call_summary: merged.call_summary ?? '',
+        client_needs: merged.client_needs ?? '',
+        campaign_objective: merged.campaign_objective ?? '',
+        proposal: merged,
       };
       await apiClient.patch(ENDPOINTS.INTELLIGENCE.UPDATE_PROPOSAL(callId), body, {
         headers: { 'Content-Type': 'application/json' },
       });
+      setAnalysis(merged);
+      setEditDraft({});
       setIsEditing(false);
     } catch {
       setError('Failed to save changes. Please try again.');
@@ -686,160 +575,26 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
     }
   };
 
-  const cmd = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
+  const setDraftField = (key: keyof SalesAnalysis, value: string) => {
+    setEditDraft((prev) => ({ ...prev, [key]: value }));
   };
 
-  const insertLink = () => {
-    const url = window.prompt('Enter URL:', 'https://');
-    if (url) cmd('createLink', url);
-  };
-
-  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (ev.target?.result) cmd('insertImage', ev.target.result as string);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  // Inline all computed styles so the output is pixel-perfect in any window/renderer
-  const inlineStyles = (root: HTMLElement): HTMLElement => {
-    const clone = root.cloneNode(true) as HTMLElement;
-    const origEls = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
-    const cloneEls = [clone, ...Array.from(clone.querySelectorAll<HTMLElement>('*'))];
-    const PROPS = [
-      'background',
-      'backgroundColor',
-      'backgroundImage',
-      'backgroundSize',
-      'backgroundPosition',
-      'backgroundRepeat',
-      'color',
-      'fontSize',
-      'fontWeight',
-      'fontFamily',
-      'fontStyle',
-      'fontVariant',
-      'padding',
-      'paddingTop',
-      'paddingRight',
-      'paddingBottom',
-      'paddingLeft',
-      'margin',
-      'marginTop',
-      'marginRight',
-      'marginBottom',
-      'marginLeft',
-      'border',
-      'borderTop',
-      'borderRight',
-      'borderBottom',
-      'borderLeft',
-      'borderColor',
-      'borderWidth',
-      'borderStyle',
-      'borderRadius',
-      'borderTopLeftRadius',
-      'borderTopRightRadius',
-      'borderBottomLeftRadius',
-      'borderBottomRightRadius',
-      'display',
-      'flexDirection',
-      'flexWrap',
-      'flex',
-      'flexShrink',
-      'flexGrow',
-      'gap',
-      'alignItems',
-      'justifyContent',
-      'gridTemplateColumns',
-      'gridColumn',
-      'gridRow',
-      'columnGap',
-      'rowGap',
-      'width',
-      'maxWidth',
-      'minWidth',
-      'height',
-      'maxHeight',
-      'minHeight',
-      'boxSizing',
-      'textTransform',
-      'letterSpacing',
-      'lineHeight',
-      'textDecoration',
-      'textAlign',
-      'opacity',
-      'overflow',
-      'position',
-      'top',
-      'right',
-      'bottom',
-      'left',
-      'zIndex',
-      'boxShadow',
-      'whiteSpace',
-      'wordBreak',
-      'listStyleType',
-      'listStylePosition',
-    ];
-    origEls.forEach((orig, i) => {
-      const cs = window.getComputedStyle(orig);
-      const styles = PROPS.map((p) => {
-        const val = cs.getPropertyValue(p.replace(/([A-Z])/g, '-$1').toLowerCase());
-        return val ? `${p.replace(/([A-Z])/g, '-$1').toLowerCase()}:${val}` : '';
-      })
-        .filter(Boolean)
-        .join(';');
-      cloneEls[i].setAttribute('style', styles);
-      // Remove class so no stale CSS interferes
-      cloneEls[i].removeAttribute('class');
-    });
-    return clone;
-  };
-
-  const buildPrintHTML = (bodyHTML: string, forWord = false) => {
-    const a4 = forWord
-      ? `@page WordSection1{size:21.0cm 29.7cm;margin:2cm} div.WordSection1{page:WordSection1}`
-      : `@page{size:A4 portrait;margin:15mm 18mm} @media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}}`;
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-      <title>Proposal — ${analysis?.campaign_objective ?? 'SocialJet'}</title>
-      <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;padding:0}${a4}</style>
-    </head><body${forWord ? ' class="WordSection1"' : ''}>${bodyHTML}</body></html>`;
+  const getDraftValue = (key: keyof SalesAnalysis): string => {
+    const val = key in editDraft ? editDraft[key] : analysis?.[key];
+    return typeof val === 'string' ? val : '';
   };
 
   const downloadPDF = () => {
-    const el = docRef.current;
-    if (!el) return;
-    const inlined = inlineStyles(el);
-    inlined.style.cssText += ';max-width:794px;margin:0 auto;box-shadow:none;border-radius:0';
+    if (!analysis) return;
+    const html = generateProposalHTML(analysis);
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(buildPrintHTML(inlined.outerHTML));
+    win.document.write(html);
     win.document.close();
     setTimeout(() => {
       win.focus();
       win.print();
-    }, 500);
-  };
-
-  const downloadWord = () => {
-    const el = docRef.current;
-    if (!el) return;
-    const inlined = inlineStyles(el);
-    inlined.style.cssText += ';max-width:100%;margin:0 auto';
-    const html = buildPrintHTML(`<div class="WordSection1">${inlined.outerHTML}</div>`, true);
-    const blob = new Blob([html], { type: 'application/msword;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Proposal — ${(analysis?.campaign_objective ?? 'SocialJet').slice(0, 60)}.doc`;
-    a.click();
-    URL.revokeObjectURL(url);
+    }, 600);
   };
 
   if (loading) {
@@ -921,16 +676,17 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
             <>
               <button
                 className={cn(styles.analysisBarBtn, styles.analysisBarBtnActive)}
-                onClick={() => setIsEditing(true)}
+                onClick={() => {
+                  setEditDraft({});
+                  setIsEditing(true);
+                }}
               >
                 <EditPenIcon /> Edit
               </button>
               <button className={styles.analysisBarBtn} onClick={downloadPDF}>
                 <DownloadIcon /> PDF
               </button>
-              <button className={styles.analysisBarBtn} onClick={downloadWord}>
-                <DownloadIcon /> Word
-              </button>
+
               <button
                 className={styles.analysisBarBtnGhost}
                 onClick={generate}
@@ -955,388 +711,42 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
         </div>
       </div>
 
-      {/* Editor toolbar — only when editing */}
-      {isEditing && (
-        <div className={styles.editorToolbar}>
-          <button
-            className={styles.editorToolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              cmd('bold');
-            }}
-            title="Bold"
-          >
-            <BoldIcon />
-          </button>
-          <button
-            className={styles.editorToolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              cmd('italic');
-            }}
-            title="Italic"
-          >
-            <ItalicIcon />
-          </button>
-          <button
-            className={styles.editorToolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              cmd('underline');
-            }}
-            title="Underline"
-          >
-            <UnderlineIcon />
-          </button>
-          <div className={styles.editorToolbarDivider} />
-          <button
-            className={styles.editorToolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              cmd('insertUnorderedList');
-            }}
-            title="Bullet list"
-          >
-            <ListIcon />
-          </button>
-          <button
-            className={styles.editorToolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              cmd('insertOrderedList');
-            }}
-            title="Numbered list"
-          >
-            <OListIcon />
-          </button>
-          <div className={styles.editorToolbarDivider} />
-          <button
-            className={styles.editorToolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              insertLink();
-            }}
-            title="Insert link"
-          >
-            <LinkIconTb />
-          </button>
-          <button
-            className={styles.editorToolbarBtn}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              fileInputRef.current?.click();
-            }}
-            title="Insert image"
-          >
-            <ImageIconTb />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleImageFile}
-          />
-          <div className={styles.editorToolbarDivider} />
-          <span className={styles.editorToolbarHint}>
-            Click to select text, then apply formatting
-          </span>
+      {/* Edit mode: structured field editor */}
+      {isEditing ? (
+        <div className={styles.proposalFieldEditor}>
+          {(
+            [
+              { key: 'call_summary' as const, label: 'Executive Summary', rows: 5 },
+              { key: 'client_needs' as const, label: 'Client Needs', rows: 4 },
+              { key: 'campaign_objective' as const, label: 'Campaign Objective', rows: 3 },
+              { key: 'current_situation' as const, label: 'Current Situation', rows: 4 },
+              { key: 'strategy' as const, label: 'Strategy', rows: 4 },
+              { key: 'key_challenges' as const, label: 'Key Challenges', rows: 4 },
+              { key: 'budget' as const, label: 'Budget', rows: 1 },
+              { key: 'timeline' as const, label: 'Timeline', rows: 1 },
+              { key: 'marketing_message' as const, label: 'Marketing Message', rows: 3 },
+              { key: 'expected_outcomes' as const, label: 'Expected Outcomes', rows: 3 },
+            ] as { key: keyof SalesAnalysis; label: string; rows: number }[]
+          ).map(({ key, label, rows }) => (
+            <div key={key} className={styles.proposalFieldRow}>
+              <label className={styles.proposalFieldLabel}>{label}</label>
+              <textarea
+                className={styles.proposalFieldTextarea}
+                rows={rows}
+                value={getDraftValue(key)}
+                onChange={(e) => setDraftField(key, e.target.value)}
+              />
+            </div>
+          ))}
         </div>
+      ) : (
+        /* View mode: WYSIWYG rendered document */
+        <div
+          ref={docRef}
+          className={styles.pdoc}
+          dangerouslySetInnerHTML={{ __html: generateProposalPageHTML(analysis!) }}
+        />
       )}
-
-      {/* Proposal document */}
-      <div
-        ref={docRef}
-        className={cn(styles.pdoc, isEditing && styles.pdocEditing)}
-        contentEditable={isEditing}
-        suppressContentEditableWarning
-      >
-        {/* Header */}
-        <div className={styles.pdocHeader}>
-          <div className={styles.pdocLogo}>Social Jet · Influencer Marketing Agency</div>
-          <h1 className={styles.pdocTitle}>
-            {analysis!.campaign_objective || 'Campaign Proposal'}
-          </h1>
-          <div className={styles.pdocMeta}>
-            <span>Prepared: {formatShortDate(new Date().toISOString())}</span>
-            {analysis!.timeline && <span>Timeline: {analysis!.timeline}</span>}
-            {analysis!.call_outcome && <span>Outcome: {analysis!.call_outcome}</span>}
-          </div>
-        </div>
-
-        <div className={styles.pdocBody}>
-          {/* KPI bar — always shown */}
-          <div className={styles.pdocKpis}>
-            <div className={styles.pdocKpi}>
-              <div className={styles.pdocKpiLabel}>Budget</div>
-              <div className={styles.pdocKpiValue}>
-                {analysis!.budget || <span className={styles.pdocEmpty}>TBD</span>}
-              </div>
-            </div>
-            <div className={styles.pdocKpi}>
-              <div className={styles.pdocKpiLabel}>Timeline</div>
-              <div className={styles.pdocKpiValue}>
-                {analysis!.timeline || <span className={styles.pdocEmpty}>TBD</span>}
-              </div>
-            </div>
-            <div className={styles.pdocKpi}>
-              <div className={styles.pdocKpiLabel}>Outcome</div>
-              <div className={styles.pdocKpiValue}>
-                {analysis!.call_outcome || <span className={styles.pdocEmpty}>—</span>}
-              </div>
-            </div>
-          </div>
-
-          {/* Participants */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Participants</div>
-            {analysis!.participants?.length > 0 ? (
-              <ul className={styles.pdocList}>
-                {analysis!.participants.map((p, i) => (
-                  <li key={i}>{p}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.pdocEmpty}>No participants listed.</p>
-            )}
-          </div>
-
-          {/* Executive Summary */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Executive Summary</div>
-            <p className={styles.pdocText}>
-              {analysis!.call_summary || (
-                <span className={styles.pdocEmpty}>No summary available.</span>
-              )}
-            </p>
-          </div>
-
-          {/* Campaign Objective */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Campaign Objective</div>
-            <p className={styles.pdocText}>
-              {analysis!.campaign_objective || (
-                <span className={styles.pdocEmpty}>Not specified.</span>
-              )}
-            </p>
-          </div>
-
-          {/* Objectives */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Objectives</div>
-            <p className={styles.pdocText}>
-              {analysis!.objectives || <span className={styles.pdocEmpty}>Not specified.</span>}
-            </p>
-          </div>
-
-          {/* Current Situation */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Current Situation</div>
-            <p className={styles.pdocText}>
-              {analysis!.current_situation || (
-                <span className={styles.pdocEmpty}>Not specified.</span>
-              )}
-            </p>
-          </div>
-
-          {/* Client Needs */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Client Needs</div>
-            <p className={styles.pdocText}>
-              {analysis!.client_needs || <span className={styles.pdocEmpty}>Not specified.</span>}
-            </p>
-          </div>
-
-          {/* Key Challenges */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Key Challenges</div>
-            <p className={styles.pdocText}>
-              {analysis!.key_challenges || (
-                <span className={styles.pdocEmpty}>None identified.</span>
-              )}
-            </p>
-          </div>
-
-          {/* Target Audience */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Target Audience</div>
-            {analysis!.target_audience ? (
-              <div className={styles.pdocAudienceGrid}>
-                <div className={styles.pdocAudienceItem}>
-                  <span className={styles.pdocAudienceLabel}>Primary</span>
-                  <span className={styles.pdocAudienceValue}>
-                    {analysis!.target_audience.primary_audience || '—'}
-                  </span>
-                </div>
-                <div className={styles.pdocAudienceItem}>
-                  <span className={styles.pdocAudienceLabel}>Age</span>
-                  <span className={styles.pdocAudienceValue}>
-                    {analysis!.target_audience.demographics?.age || '—'}
-                  </span>
-                </div>
-                <div className={styles.pdocAudienceItem}>
-                  <span className={styles.pdocAudienceLabel}>Location</span>
-                  <span className={styles.pdocAudienceValue}>
-                    {analysis!.target_audience.demographics?.location || '—'}
-                  </span>
-                </div>
-                <div className={styles.pdocAudienceItem}>
-                  <span className={styles.pdocAudienceLabel}>Psychographics</span>
-                  <span className={styles.pdocAudienceValue}>
-                    {analysis!.target_audience.psychographics || '—'}
-                  </span>
-                </div>
-                <div className={styles.pdocAudienceItem}>
-                  <span className={styles.pdocAudienceLabel}>Behaviour</span>
-                  <span className={styles.pdocAudienceValue}>
-                    {analysis!.target_audience.behavioral_traits || '—'}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className={styles.pdocEmpty}>Not specified.</p>
-            )}
-          </div>
-
-          {/* Strategy */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Our Strategy</div>
-            <p className={styles.pdocText}>
-              {analysis!.strategy || <span className={styles.pdocEmpty}>Not specified.</span>}
-            </p>
-          </div>
-
-          {/* Marketing Message */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Marketing Message</div>
-            <p className={styles.pdocText}>
-              {analysis!.marketing_message || (
-                <span className={styles.pdocEmpty}>Not specified.</span>
-              )}
-            </p>
-          </div>
-
-          {/* Pricing Packages */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Pricing Packages</div>
-            {analysis!.pricing_tiers?.length > 0 ? (
-              <div className={styles.pdocPricing}>
-                {analysis!.pricing_tiers.map((tier, i) => (
-                  <div key={i} className={styles.pdocTier}>
-                    <div className={styles.pdocTierName}>{tier.package_name}</div>
-                    <div className={styles.pdocTierPrice}>{tier.price}</div>
-                    <div className={styles.pdocTierDesc}>{tier.description}</div>
-                    {tier.influencer_count_range && (
-                      <div className={styles.pdocTierMeta}>
-                        {tier.influencer_count_range} influencers
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={styles.pdocEmpty}>No pricing packages defined yet.</p>
-            )}
-          </div>
-
-          {/* Package Inclusions */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Package Inclusions</div>
-            {analysis!.package_inclusions?.length > 0 ? (
-              <ul className={styles.pdocList}>
-                {analysis!.package_inclusions.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.pdocEmpty}>Not specified.</p>
-            )}
-          </div>
-
-          {/* Value Adds */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Value Adds</div>
-            {analysis!.value_adds?.length > 0 ? (
-              <ul className={styles.pdocList}>
-                {analysis!.value_adds.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.pdocEmpty}>Not specified.</p>
-            )}
-          </div>
-
-          {/* Execution Plan */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Execution Plan</div>
-            {analysis!.execution_plan?.length > 0 ? (
-              <ul className={styles.pdocList}>
-                {analysis!.execution_plan.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.pdocEmpty}>Not specified.</p>
-            )}
-          </div>
-
-          {/* Key Success Metrics */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Key Success Metrics</div>
-            {analysis!.key_success_metrics?.length > 0 ? (
-              <ul className={styles.pdocList}>
-                {analysis!.key_success_metrics.map((m, i) => (
-                  <li key={i}>{typeof m === 'string' ? m : JSON.stringify(m)}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.pdocEmpty}>Not specified.</p>
-            )}
-          </div>
-
-          {/* Expected Outcomes */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Expected Outcomes</div>
-            <p className={styles.pdocText}>
-              {analysis!.expected_outcomes || (
-                <span className={styles.pdocEmpty}>Not specified.</span>
-              )}
-            </p>
-          </div>
-
-          {/* Next Steps */}
-          <div className={styles.pdocSection}>
-            <div className={styles.pdocSectionTitle}>Next Steps</div>
-            <p className={styles.pdocText}>
-              {analysis!.next_steps || <span className={styles.pdocEmpty}>Not specified.</span>}
-            </p>
-          </div>
-
-          {/* Pricing Note */}
-          {analysis!.pricing_note && (
-            <div className={styles.pdocSection}>
-              <div className={styles.pdocSectionTitle}>Pricing Note</div>
-              <p className={styles.pdocText}>{analysis!.pricing_note}</p>
-            </div>
-          )}
-
-          {/* Flag for review */}
-          {analysis!.flag_for_review && (
-            <div className={styles.pdocFlagBanner}>
-              ⚠ Flagged for review{analysis!.flag_reason ? `: ${analysis!.flag_reason}` : ''}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className={styles.pdocFooter}>
-          <span className={styles.pdocFooterBrand}>Social Jet · socialjet.sg</span>
-          <span className={styles.pdocFooterDate}>
-            Generated {formatShortDate(new Date().toISOString())}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

@@ -47,10 +47,11 @@ export const intelligenceService = {
   },
 
   analyzeSales: async (transcript: string, meetingId: string): Promise<SalesAnalysis> => {
-    const { data } = await apiClient.post<SalesAnalysis>(ENDPOINTS.INTELLIGENCE.ANALYZE, {
-      transcript,
-      meeting_id: meetingId,
-    });
+    const { data } = await apiClient.post<SalesAnalysis>(
+      ENDPOINTS.INTELLIGENCE.ANALYZE,
+      { transcript, meeting_id: meetingId },
+      { timeout: 300000 }
+    );
     return data;
   },
 };

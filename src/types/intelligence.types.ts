@@ -77,6 +77,7 @@ export interface SalesContentType {
   name: string;
   description: string;
   examples: string[];
+  is_suggested?: boolean;
 }
 
 export interface SalesKeyMetric {
@@ -107,6 +108,7 @@ export interface SalesAnalysis {
   value_adds: string[];
   next_steps: string;
   expected_outcomes: string;
+  brand_name: string;
   flag_for_review: boolean;
   flag_reason: string;
   pricing_note: string;
