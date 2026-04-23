@@ -306,10 +306,45 @@ const LeadsIcon = () => (
   </svg>
 );
 
-const ReportsIcon = () => (
+const InfluencersIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle
+      cx="12"
+      cy="8"
+      r="4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M6 20v-1a6 6 0 0 1 12 0v1"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M17 11l1.5 1.5L21 10"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ApprovalsIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path
-      d="M3 3v18h18M7 14l4-4 4 4 4-4"
+      d="M9 11l3 3L22 4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
@@ -463,21 +498,18 @@ export const Sidebar = () => {
       ];
     }
 
-    if (currentRole === UserRole.CampaignManager) {
+    if (currentRole === UserRole.CampaignManager || currentRole === UserRole.CampaignManagerLead) {
       return [
         { type: 'link', label: 'Dashboard', path: '/campaigns', icon: <DashboardIcon /> },
+        { type: 'link', label: 'Leads', path: '/campaigns/leads', icon: <LeadsIcon /> },
         {
-          type: 'accordion',
-          label: 'Campaign Ops',
-          icon: <CampaignIcon />,
-          subItems: [
-            { label: 'Onboarding Agent', path: '/campaigns/onboarding' },
-            { label: 'Discovery', path: '/campaigns/discovery' },
-            { label: 'Outreach', path: '/campaigns/outreach' },
-            { label: 'Content Tracker', path: '/campaigns/content-tracker' },
-            { label: 'Review', path: '/campaigns/review' },
-          ],
+          type: 'link',
+          label: 'Influencers',
+          path: '/campaigns/influencers',
+          icon: <InfluencersIcon />,
         },
+        { type: 'link', label: 'Inbox', path: '/campaigns/inbox', icon: <InboxIcon /> },
+        { type: 'link', label: 'Approvals', path: '/campaigns/approvals', icon: <ApprovalsIcon /> },
       ];
     }
 
@@ -514,7 +546,6 @@ export const Sidebar = () => {
         path: '/sales/meeting-requests',
         icon: <CheckCircleIcon />,
       },
-      { type: 'link', label: 'Reports', path: '/sales/reports', icon: <ReportsIcon /> },
     ];
   }, [currentRole]);
 

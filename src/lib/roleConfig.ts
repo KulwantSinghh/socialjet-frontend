@@ -16,6 +16,16 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
       { resource: 'reports', actions: ['read'] },
     ],
   },
+  [UserRole.CampaignManagerLead]: {
+    role: UserRole.CampaignManagerLead,
+    label: 'Campaign Manager Lead',
+    defaultRoute: '/campaigns',
+    permissions: [
+      { resource: 'campaigns', actions: ['create', 'read', 'update', 'delete'] },
+      { resource: 'templates', actions: ['create', 'read', 'update', 'delete'] },
+      { resource: 'analytics', actions: ['read'] },
+    ],
+  },
   [UserRole.CampaignManager]: {
     role: UserRole.CampaignManager,
     label: 'Campaign Manager',

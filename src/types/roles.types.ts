@@ -1,5 +1,6 @@
 export enum UserRole {
   Sales = 'sales',
+  CampaignManagerLead = 'campaign_manager_lead',
   CampaignManager = 'campaign_manager',
   Finance = 'finance',
   Admin = 'admin',

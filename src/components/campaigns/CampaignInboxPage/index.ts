@@ -1,0 +1,1 @@
+export { CampaignInboxPage } from './CampaignInboxPage';

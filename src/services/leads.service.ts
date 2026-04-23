@@ -35,4 +35,8 @@ export const leadsService = {
     });
     return data;
   },
+
+  updateStatus: async (leadId: string, status: string): Promise<void> => {
+    await apiClient.patch(ENDPOINTS.LEADS.STATUS(leadId), { status });
+  },
 };

@@ -257,3 +257,163 @@
     background-position: -200% 0;
   }
 }
+
+/* ── Edit Pipeline Button ── */
+.editBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  border: 1.5px solid var(--color-border-default);
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.editBtn:hover {
+  border-color: var(--color-brand-purple);
+  color: var(--color-brand-purple);
+  background: rgba(108, 99, 255, 0.06);
+}
+
+.editBtnActive {
+  background: var(--color-brand-purple);
+  border-color: var(--color-brand-purple);
+  color: #fff;
+}
+
+.editBtnActive:hover {
+  background: var(--color-brand-purple);
+  color: #fff;
+  opacity: 0.9;
+}
+
+/* ── Edit Mode Banner ── */
+.editBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(108, 99, 255, 0.08);
+  border: 1px solid rgba(108, 99, 255, 0.25);
+  color: var(--color-brand-purple);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+/* ── Column: edit / drop states ── */
+.columnEditable {
+  border-style: dashed;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.columnDropOver {
+  border-color: var(--color-brand-purple) !important;
+  border-style: solid !important;
+  background: rgba(108, 99, 255, 0.05);
+}
+
+.columnBodyOver {
+  background: rgba(108, 99, 255, 0.04);
+  border-radius: var(--radius-lg);
+}
+
+.columnEmptyOver {
+  color: var(--color-brand-purple);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ── Drop placeholder ── */
+.dropPlaceholder {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(108, 99, 255, 0.35);
+  margin-top: var(--space-1);
+}
+
+/* ── Card: edit / drag states ── */
+.cardEditable {
+  cursor: grab;
+}
+
+.cardEditable:active {
+  cursor: grabbing;
+}
+
+.cardEditable:hover {
+  border-color: var(--color-brand-purple);
+  box-shadow: var(--shadow-md);
+}
+
+.cardDragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+  border-color: var(--color-brand-purple) !important;
+}
+
+/* ── Drag handle ── */
+.dragHandle {
+  display: flex;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  margin-bottom: calc(var(--space-1) * -1);
+  cursor: grab;
+}
+
+/* ── Error Toast ── */
+.errorToast {
+  position: fixed;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-error-700, #b91c1c);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-xl);
+  white-space: nowrap;
+  animation: toastIn 0.2s ease;
+}
+
+.errorToastClose {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  opacity: 0.8;
+  padding: 0;
+  line-height: 1;
+}
+
+.errorToastClose:hover {
+  opacity: 1;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

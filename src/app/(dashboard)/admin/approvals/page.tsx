@@ -8,7 +8,6 @@ import { apiClient } from '@/services/api/client';
 import { ENDPOINTS } from '@/services/api/endpoints';
 import { cn } from '@/lib/utils';
 import { generateProposalHTML, generateProposalPageHTML } from '@/lib/generateProposalHTML';
-import { generateProposalPDFBlob } from '@/lib/generateProposalPDF';
 import type { IntelligenceCall, SalesAnalysis } from '@/types/intelligence.types';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -275,14 +274,10 @@ function ProposalDetail({
       setAcceptingStep('approving');
       await apiClient.post(ENDPOINTS.APPROVALS.APPROVE(call.call_id), { notes: 'Approved' });
 
-      // Step 2: Generate PDF blob and send via email
+      // Step 2: Send HTML to backend — backend renders PDF via Puppeteer
       setAcceptingStep('sending');
-      const blob = await generateProposalPDFBlob(analysis);
-      const form = new FormData();
-      form.append('pdf', blob, `proposal-${call.call_id}.pdf`);
-      await apiClient.post(ENDPOINTS.APPROVALS.SEND_EMAIL(call.call_id), form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const html = generateProposalHTML(analysis);
+      await apiClient.post(ENDPOINTS.APPROVALS.SEND_EMAIL(call.call_id), { html });
 
       onDone(call.call_id, 'accepted');
     } catch {

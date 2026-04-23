@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils';
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin' },
   { value: 'sales', label: 'Sales' },
+  { value: 'campaign_manager_lead', label: 'Campaign Manager Lead' },
   { value: 'campaign_manager', label: 'Campaign Manager' },
   { value: 'finance', label: 'Finance' },
-  { value: 'client', label: 'Client' },
 ];
 
 export interface AddMemberModalProps {

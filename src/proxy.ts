@@ -10,7 +10,7 @@ const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password'];
 
 const ROLE_ROUTE_MAP: Record<string, string[]> = {
   '/sales': ['sales', 'admin'],
-  '/campaigns': ['campaign_manager', 'admin'],
+  '/campaigns': ['campaign_manager', 'campaign_manager_lead', 'admin'],
   '/finance': ['finance', 'admin'],
   '/admin': ['admin'],
   '/client': ['client', 'admin'],
@@ -18,6 +18,7 @@ const ROLE_ROUTE_MAP: Record<string, string[]> = {
 
 const DEFAULT_ROUTES: Record<string, string> = {
   sales: '/sales',
+  campaign_manager_lead: '/campaigns',
   campaign_manager: '/campaigns',
   finance: '/finance',
   admin: '/admin',
