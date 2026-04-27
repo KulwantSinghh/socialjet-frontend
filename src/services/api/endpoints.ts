@@ -90,6 +90,8 @@ export const ENDPOINTS = {
     KOL_BRIEF_DETAIL: (leadId: string) => `/kol-brief/${leadId}`,
     KOL_BRIEF_UPDATE: (briefId: string) => `/kol-brief/${briefId}`,
     KOL_BRIEF_SUBMIT: (briefId: string) => `/kol-brief/${briefId}/submit`,
+    ONBOARDING_SEND_PDF: (leadId: string) => `/onboarding/${leadId}/send-pdf`,
+    KOL_BRIEF_SEND_PDF: (leadId: string) => `/kol-brief/${leadId}/send-pdf`,
   },
 
   CAMPAIGN_INFLUENCERS: {

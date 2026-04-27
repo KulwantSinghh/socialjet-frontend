@@ -326,7 +326,20 @@ export const campaignsService = {
   getKolBrief: async (leadId: string): Promise<KolBrief | null> => {
     try {
       const { data } = await apiClient.get(ENDPOINTS.CAMPAIGN_DOCUMENTS.KOL_BRIEF_DETAIL(leadId));
-      const raw = (Array.isArray(data) ? data[0] : data) as Record<string, unknown>;
+      // Response shape: { lead_id, kol_briefs: [...], count } or array or single object
+      let raw: Record<string, unknown>;
+      if (Array.isArray(data)) {
+        raw = data[0];
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        Array.isArray((data as Record<string, unknown>).kol_briefs)
+      ) {
+        const briefs = (data as Record<string, unknown>).kol_briefs as Record<string, unknown>[];
+        raw = briefs[0];
+      } else {
+        raw = data as Record<string, unknown>;
+      }
       if (!raw) return null;
       return {
         id: (raw.brief_id ?? raw.id) as string,
@@ -343,6 +356,60 @@ export const campaignsService = {
 
   submitKolBrief: async (briefId: string): Promise<void> => {
     await apiClient.post(ENDPOINTS.CAMPAIGN_DOCUMENTS.KOL_BRIEF_SUBMIT(briefId));
+  },
+
+  updateOnboardingDocument: async (
+    docId: string,
+    document: CampaignDocument['document']
+  ): Promise<CampaignDocument> => {
+    const { data } = await apiClient.patch(ENDPOINTS.CAMPAIGN_DOCUMENTS.UPDATE('', docId), {
+      document,
+    });
+    return mapDocument(data as Record<string, unknown>);
+  },
+
+  updateKolBriefDocument: async (
+    briefId: string,
+    document: KolBrief['document']
+  ): Promise<KolBrief> => {
+    const { data } = await apiClient.patch(ENDPOINTS.CAMPAIGN_DOCUMENTS.KOL_BRIEF_UPDATE(briefId), {
+      document,
+    });
+    const raw = data as Record<string, unknown>;
+    return {
+      id: (raw.brief_id ?? raw.id) as string,
+      campaignId: (raw.campaign_id ?? '') as string,
+      leadId: (raw.lead_id ?? '') as string,
+      status: (raw.status ?? 'draft') as KolBrief['status'],
+      document: raw.document as KolBrief['document'],
+      createdAt: (raw.created_at ?? '') as string,
+    };
+  },
+
+  sendOnboardingPdf: async (
+    leadId: string,
+    html: string,
+    opts?: { toEmail?: string; subject?: string; message?: string }
+  ): Promise<void> => {
+    await apiClient.post(ENDPOINTS.CAMPAIGN_DOCUMENTS.ONBOARDING_SEND_PDF(leadId), {
+      html,
+      ...(opts?.toEmail ? { to_email: opts.toEmail } : {}),
+      ...(opts?.subject ? { subject: opts.subject } : {}),
+      ...(opts?.message ? { message: opts.message } : {}),
+    });
+  },
+
+  sendKolBriefPdf: async (
+    leadId: string,
+    html: string,
+    opts?: { toEmail?: string; subject?: string; message?: string }
+  ): Promise<void> => {
+    await apiClient.post(ENDPOINTS.CAMPAIGN_DOCUMENTS.KOL_BRIEF_SEND_PDF(leadId), {
+      html,
+      ...(opts?.toEmail ? { to_email: opts.toEmail } : {}),
+      ...(opts?.subject ? { subject: opts.subject } : {}),
+      ...(opts?.message ? { message: opts.message } : {}),
+    });
   },
 
   // Influencers (global)

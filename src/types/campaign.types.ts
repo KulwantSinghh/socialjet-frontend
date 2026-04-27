@@ -157,6 +157,7 @@ export interface OnboardingDocument {
   client_comments: string[];
   onboarding_call_agenda: string[];
   next_steps: { action: string; owner: string; deadline: string }[];
+  raw_html?: string;
 }
 
 export interface KolBriefDocument {
@@ -185,6 +186,7 @@ export interface KolBriefDocument {
     content_usage: string;
     community_guidelines: string;
   };
+  raw_html?: string;
 }
 
 export interface CampaignDocument {

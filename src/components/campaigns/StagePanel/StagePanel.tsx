@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import styles from './StagePanel.module.css';
+import { ProposalEditor } from '@/components/shared/ProposalEditor';
+import type { Editor } from '@tiptap/react';
 import {
   useQuestionnaire,
   useCampaignMeeting,
@@ -1131,7 +1133,13 @@ function MeetingStage({ leadId }: { leadId: string }) {
 }
 
 // ─── Onboarding Doc renderer ──────────────────────────────────────────────────
-function OnboardingDocView({ doc }: { doc: OnboardingDocument }) {
+function OnboardingDocView({
+  doc,
+  docRef,
+}: {
+  doc: OnboardingDocument;
+  docRef?: React.RefObject<HTMLDivElement | null>;
+}) {
   const val = (v: string | undefined) =>
     v ? (
       <span className={styles.docFieldValue}>{v}</span>
@@ -1152,310 +1160,363 @@ function OnboardingDocView({ doc }: { doc: OnboardingDocument }) {
       <span className={styles.docFieldEmpty}>—</span>
     );
 
+  const today = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
-    <>
-      {/* Brand */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Brand</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          {(
-            [
-              ['Brand Name', doc.brand?.name],
-              ['Industry', doc.brand?.industry],
-              ['Contact', doc.brand?.contact_name],
-              ['Email', doc.brand?.email],
-              ['Phone', doc.brand?.phone],
-              ['Website', doc.brand?.website],
-              ['Instagram', doc.brand?.instagram],
-              ['TikTok', doc.brand?.tiktok],
-              ['Facebook', doc.brand?.facebook],
-            ] as [string, string][]
-          ).map(([label, value]) => (
-            <div key={label} className={styles.docField}>
-              <span className={styles.docFieldLabel}>{label}</span>
-              {val(value)}
-            </div>
-          ))}
-          {doc.brand?.summary && (
-            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-              <span className={styles.docFieldLabel}>Summary</span>
-              {val(doc.brand.summary)}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Campaign */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Campaign</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Platforms</span>
-            {pills(doc.campaign?.platforms)}
+    <div className={styles.docDocumentCard} ref={docRef}>
+      {/* Hero */}
+      <div className={styles.docHero}>
+        <div className={styles.docHeroTop}>SOCIALJET · INFLUENCER MARKETING AGENCY</div>
+        <div className={styles.docHeroSubLabel}>PREPARED FOR</div>
+        <h2 className={styles.docHeroTitle}>
+          SocialJet <span className={styles.docHeroCross}>×</span> {doc.brand?.name || 'Brand'}
+        </h2>
+        <div className={styles.docHeroBadge}>ONBOARDING DOCUMENT</div>
+        {(doc.brand?.summary || doc.campaign?.marketing_message) && (
+          <p className={styles.docHeroDesc}>
+            {doc.brand?.summary || doc.campaign?.marketing_message}
+          </p>
+        )}
+        <div className={styles.docHeroMetaRow}>
+          <div className={styles.docHeroMetaItem}>
+            <span className={styles.docHeroMetaLabel}>PREPARED FOR</span>
+            <span className={styles.docHeroMetaValue}>
+              {doc.brand?.contact_name || doc.brand?.name || '—'}
+            </span>
           </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Geographic Focus</span>
-            {val(doc.campaign?.geographic_focus)}
+          <div className={styles.docHeroMetaItem}>
+            <span className={styles.docHeroMetaLabel}>BUDGET</span>
+            <span className={styles.docHeroMetaValue}>{doc.budget || '—'}</span>
           </div>
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>Marketing Message</span>
-            {val(doc.campaign?.marketing_message)}
-          </div>
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>Deliverables</span>
-            {val(doc.campaign?.deliverables)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Objectives</span>
-            {pills(doc.campaign?.objectives)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Creative Angles</span>
-            {pills(doc.campaign?.creative_angles)}
-          </div>
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>Content Timeline</span>
-            {val(doc.campaign?.content_timeline)}
+          <div className={styles.docHeroMetaItem}>
+            <span className={styles.docHeroMetaLabel}>DATE</span>
+            <span className={styles.docHeroMetaValue}>{today}</span>
           </div>
         </div>
       </div>
 
-      {/* KOLs */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>KOLs</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Total Count</span>
-            {val(doc.kols?.total_count?.toString())}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Preferred Age Range</span>
-            {val(doc.kols?.preferred_age_range)}
-          </div>
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>Ideal Profile</span>
-            {val(doc.kols?.ideal_profile)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>No-Gos</span>
-            {pills(doc.kols?.no_gos)}
-          </div>
-          {(doc.kols?.tier_breakdown?.length ?? 0) > 0 && (
-            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-              <span className={styles.docFieldLabel}>Tier Breakdown</span>
-              <table className={styles.docTable}>
-                <thead>
-                  <tr>
-                    <th>Tier</th>
-                    <th>Count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {doc.kols.tier_breakdown.map((t, i) => (
-                    <tr key={i}>
-                      <td>{t.tier}</td>
-                      <td>{t.count ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Content</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Type Preferences</span>
-            {pills(doc.content?.type_preferences)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Tone & Style</span>
-            {val(doc.content?.tone_and_style)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Mandatory Inclusions</span>
-            {pills(doc.content?.mandatory_inclusions)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Content Don&apos;ts</span>
-            {pills(doc.content?.content_donts)}
-          </div>
-        </div>
-      </div>
-
-      {/* Product */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Product</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Main Products</span>
-            {pills(doc.product?.main_products)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>USPs</span>
-            {pills(doc.product?.usps)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Delivery By</span>
-            {val(doc.product?.delivery_by)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Loan / Given</span>
-            {val(doc.product?.loan_or_given)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Lead Time (days)</span>
-            {val(doc.product?.lead_time_days)}
-          </div>
-        </div>
-      </div>
-
-      {/* Offer & CTA */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Offer & CTA</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Offer</span>
-            {val(doc.offer_and_cta?.offer)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>CTA</span>
-            {val(doc.offer_and_cta?.cta)}
-          </div>
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>CTA Links</span>
-            {pills(doc.offer_and_cta?.cta_links)}
-          </div>
-        </div>
-      </div>
-
-      {/* Budget & Timeline */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Budget & Timeline</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Budget</span>
-            {val(doc.budget)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Posting Schedule</span>
-            {val(doc.timeline?.posting_schedule)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Start Date</span>
-            {val(doc.timeline?.start_date)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>End Date</span>
-            {val(doc.timeline?.end_date)}
-          </div>
-          {(doc.timeline?.key_dates?.length ?? 0) > 0 && (
-            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-              <span className={styles.docFieldLabel}>Key Dates</span>
-              <table className={styles.docTable}>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Milestone</th>
-                    <th>Owner</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {doc.timeline.key_dates.map((d, i) => (
-                    <tr key={i}>
-                      <td>{d.date}</td>
-                      <td>{d.milestone}</td>
-                      <td>{d.owner}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Next Steps */}
-      {(doc.next_steps?.length ?? 0) > 0 && (
-        <div className={styles.docSection}>
-          <div className={styles.docSectionHeader}>
-            <span className={styles.docSectionTitle}>Next Steps</span>
-          </div>
-          <div className={styles.docSectionBodyFull}>
-            <table className={styles.docTable}>
-              <thead>
-                <tr>
-                  <th>Action</th>
-                  <th>Owner</th>
-                  <th>Deadline</th>
-                </tr>
-              </thead>
-              <tbody>
-                {doc.next_steps.map((s, i) => (
-                  <tr key={i}>
-                    <td>{s.action}</td>
-                    <td>{s.owner}</td>
-                    <td>{s.deadline}</td>
-                  </tr>
+      {/* Body */}
+      <div className={styles.docBody}>
+        {doc.raw_html ? (
+          <div dangerouslySetInnerHTML={{ __html: doc.raw_html }} />
+        ) : (
+          <>
+            {/* Brand */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Brand</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                {(
+                  [
+                    ['Brand Name', doc.brand?.name],
+                    ['Industry', doc.brand?.industry],
+                    ['Contact', doc.brand?.contact_name],
+                    ['Email', doc.brand?.email],
+                    ['Phone', doc.brand?.phone],
+                    ['Website', doc.brand?.website],
+                    ['Instagram', doc.brand?.instagram],
+                    ['TikTok', doc.brand?.tiktok],
+                    ['Facebook', doc.brand?.facebook],
+                  ] as [string, string][]
+                ).map(([label, value]) => (
+                  <div key={label} className={styles.docField}>
+                    <span className={styles.docFieldLabel}>{label}</span>
+                    {val(value)}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                {doc.brand?.summary && (
+                  <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                    <span className={styles.docFieldLabel}>Summary</span>
+                    {val(doc.brand.summary)}
+                  </div>
+                )}
+              </div>
+            </div>
 
-      {/* Pending Items */}
-      {(doc.pending_items?.length ?? 0) > 0 && (
-        <div className={styles.docSection}>
-          <div className={styles.docSectionHeader}>
-            <span className={styles.docSectionTitle}>Pending Items</span>
-          </div>
-          <div className={styles.docSectionBodyFull}>
-            <table className={styles.docTable}>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>From</th>
-                  <th>Deadline</th>
-                </tr>
-              </thead>
-              <tbody>
-                {doc.pending_items.map((p, i) => (
-                  <tr key={i}>
-                    <td>{p.item}</td>
-                    <td>{p.from}</td>
-                    <td>{p.deadline}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </>
+            {/* Campaign */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Campaign</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Platforms</span>
+                  {pills(doc.campaign?.platforms)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Geographic Focus</span>
+                  {val(doc.campaign?.geographic_focus)}
+                </div>
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>Marketing Message</span>
+                  {val(doc.campaign?.marketing_message)}
+                </div>
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>Deliverables</span>
+                  {val(doc.campaign?.deliverables)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Objectives</span>
+                  {pills(doc.campaign?.objectives)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Creative Angles</span>
+                  {pills(doc.campaign?.creative_angles)}
+                </div>
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>Content Timeline</span>
+                  {val(doc.campaign?.content_timeline)}
+                </div>
+              </div>
+            </div>
+
+            {/* KOLs */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>KOLs</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Total Count</span>
+                  {val(doc.kols?.total_count?.toString())}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Preferred Age Range</span>
+                  {val(doc.kols?.preferred_age_range)}
+                </div>
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>Ideal Profile</span>
+                  {val(doc.kols?.ideal_profile)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>No-Gos</span>
+                  {pills(doc.kols?.no_gos)}
+                </div>
+                {(doc.kols?.tier_breakdown?.length ?? 0) > 0 && (
+                  <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                    <span className={styles.docFieldLabel}>Tier Breakdown</span>
+                    <table className={styles.docTable}>
+                      <thead>
+                        <tr>
+                          <th>Tier</th>
+                          <th>Count</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {doc.kols.tier_breakdown.map((t, i) => (
+                          <tr key={i}>
+                            <td>{t.tier}</td>
+                            <td>{t.count ?? '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Content</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Type Preferences</span>
+                  {pills(doc.content?.type_preferences)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Tone & Style</span>
+                  {val(doc.content?.tone_and_style)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Mandatory Inclusions</span>
+                  {pills(doc.content?.mandatory_inclusions)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Content Don&apos;ts</span>
+                  {pills(doc.content?.content_donts)}
+                </div>
+              </div>
+            </div>
+
+            {/* Product */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Product</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Main Products</span>
+                  {pills(doc.product?.main_products)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>USPs</span>
+                  {pills(doc.product?.usps)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Delivery By</span>
+                  {val(doc.product?.delivery_by)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Loan / Given</span>
+                  {val(doc.product?.loan_or_given)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Lead Time (days)</span>
+                  {val(doc.product?.lead_time_days)}
+                </div>
+              </div>
+            </div>
+
+            {/* Offer & CTA */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Offer & CTA</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Offer</span>
+                  {val(doc.offer_and_cta?.offer)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>CTA</span>
+                  {val(doc.offer_and_cta?.cta)}
+                </div>
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>CTA Links</span>
+                  {pills(doc.offer_and_cta?.cta_links)}
+                </div>
+              </div>
+            </div>
+
+            {/* Budget & Timeline */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Budget & Timeline</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Budget</span>
+                  {val(doc.budget)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Posting Schedule</span>
+                  {val(doc.timeline?.posting_schedule)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Start Date</span>
+                  {val(doc.timeline?.start_date)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>End Date</span>
+                  {val(doc.timeline?.end_date)}
+                </div>
+                {(doc.timeline?.key_dates?.length ?? 0) > 0 && (
+                  <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                    <span className={styles.docFieldLabel}>Key Dates</span>
+                    <table className={styles.docTable}>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Milestone</th>
+                          <th>Owner</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {doc.timeline.key_dates.map((d, i) => (
+                          <tr key={i}>
+                            <td>{d.date}</td>
+                            <td>{d.milestone}</td>
+                            <td>{d.owner}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Next Steps */}
+            {(doc.next_steps?.length ?? 0) > 0 && (
+              <div className={styles.docSection}>
+                <div className={styles.docSectionHeader}>
+                  <span className={styles.docSectionTitle}>Next Steps</span>
+                </div>
+                <div className={styles.docSectionBodyFull}>
+                  <table className={styles.docTable}>
+                    <thead>
+                      <tr>
+                        <th>Action</th>
+                        <th>Owner</th>
+                        <th>Deadline</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {doc.next_steps.map((s, i) => (
+                        <tr key={i}>
+                          <td>{s.action}</td>
+                          <td>{s.owner}</td>
+                          <td>{s.deadline}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Pending Items */}
+            {(doc.pending_items?.length ?? 0) > 0 && (
+              <div className={styles.docSection}>
+                <div className={styles.docSectionHeader}>
+                  <span className={styles.docSectionTitle}>Pending Items</span>
+                </div>
+                <div className={styles.docSectionBodyFull}>
+                  <table className={styles.docTable}>
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>From</th>
+                        <th>Deadline</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {doc.pending_items.map((p, i) => (
+                        <tr key={i}>
+                          <td>{p.item}</td>
+                          <td>{p.from}</td>
+                          <td>{p.deadline}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      {/* docBody */}
+    </div>
   );
 }
 
 // ─── KOL Brief renderer ───────────────────────────────────────────────────────
-function KolBriefDocView({ doc }: { doc: KolBriefDocument }) {
+function KolBriefDocView({
+  doc,
+  docRef,
+}: {
+  doc: KolBriefDocument;
+  docRef?: React.RefObject<HTMLDivElement | null>;
+}) {
   const val = (v: string | undefined) =>
     v ? (
       <span className={styles.docFieldValue}>{v}</span>
@@ -1476,154 +1537,214 @@ function KolBriefDocView({ doc }: { doc: KolBriefDocument }) {
       <span className={styles.docFieldEmpty}>—</span>
     );
 
+  const today = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
-    <>
-      {/* Campaign Overview */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Campaign Overview</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          {(
-            [
-              ['Brand', doc.campaign_overview?.brand_name],
-              ['Campaign Name', doc.campaign_overview?.campaign_name],
-              ['Platforms & Format', doc.campaign_overview?.platforms_and_format],
-              ['Deliverables', doc.campaign_overview?.deliverables],
-              ['Deadlines', doc.campaign_overview?.deadlines],
-            ] as [string, string][]
-          ).map(([label, value]) => (
-            <div key={label} className={styles.docField}>
-              <span className={styles.docFieldLabel}>{label}</span>
-              {val(value)}
-            </div>
-          ))}
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>Objective</span>
-            {val(doc.campaign_overview?.objective)}
+    <div className={styles.docDocumentCard} ref={docRef}>
+      {/* Hero */}
+      <div className={styles.docHero}>
+        <div className={styles.docHeroTop}>SOCIALJET · INFLUENCER MARKETING AGENCY</div>
+        <div className={styles.docHeroSubLabel}>PREPARED FOR</div>
+        <h2 className={styles.docHeroTitle}>
+          SocialJet <span className={styles.docHeroCross}>×</span>{' '}
+          {doc.campaign_overview?.brand_name || 'Brand'}
+        </h2>
+        <div className={styles.docHeroBadge}>KOL BRIEF</div>
+        {(doc.campaign_overview?.objective || doc.campaign_overview?.marketing_message) && (
+          <p className={styles.docHeroDesc}>
+            {doc.campaign_overview?.objective || doc.campaign_overview?.marketing_message}
+          </p>
+        )}
+        <div className={styles.docHeroMetaRow}>
+          <div className={styles.docHeroMetaItem}>
+            <span className={styles.docHeroMetaLabel}>CAMPAIGN</span>
+            <span className={styles.docHeroMetaValue}>
+              {doc.campaign_overview?.campaign_name || '—'}
+            </span>
           </div>
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>Marketing Message</span>
-            {val(doc.campaign_overview?.marketing_message)}
+          <div className={styles.docHeroMetaItem}>
+            <span className={styles.docHeroMetaLabel}>PLATFORMS</span>
+            <span className={styles.docHeroMetaValue}>
+              {doc.campaign_overview?.platforms_and_format || '—'}
+            </span>
           </div>
-        </div>
-      </div>
-
-      {/* Content Angle */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Content Angle</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Story Themes</span>
-            {pills(doc.content_angle?.story_theme)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>USPs</span>
-            {pills(doc.content_angle?.usps)}
-          </div>
-          {doc.content_angle?.usp_note && (
-            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-              <span className={styles.docFieldLabel}>USP Note</span>
-              {val(doc.content_angle.usp_note)}
-            </div>
-          )}
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>Suggested Hooks</span>
-            {pills(doc.content_angle?.suggested_hooks)}
+          <div className={styles.docHeroMetaItem}>
+            <span className={styles.docHeroMetaLabel}>DATE</span>
+            <span className={styles.docHeroMetaValue}>{today}</span>
           </div>
         </div>
       </div>
 
-      {/* CTA */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>CTA</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Primary CTA</span>
-            {val(doc.cta?.primary_cta)}
-          </div>
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Placement</span>
-            {val(doc.cta?.placement)}
-          </div>
-          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-            <span className={styles.docFieldLabel}>CTA Variations</span>
-            {pills(doc.cta?.suggested_ctas)}
-          </div>
-        </div>
-      </div>
-
-      {/* Content Board */}
-      {(doc.content_board?.length ?? 0) > 0 && (
-        <div className={styles.docSection}>
-          <div className={styles.docSectionHeader}>
-            <span className={styles.docSectionTitle}>Content Board</span>
-          </div>
-          <div className={styles.docContentBoard}>
-            {doc.content_board.map((c, i) => (
-              <div key={i} className={styles.contentBoardCard}>
-                <div className={styles.contentBoardCardHeader}>{c.title}</div>
-                <div className={styles.contentBoardCardBody}>
-                  <div className={styles.docField}>
-                    <span className={styles.docFieldLabel}>Concept</span>
-                    <span className={styles.docFieldValue}>{c.concept}</span>
+      {/* Body */}
+      <div className={styles.docBody}>
+        {doc.raw_html ? (
+          <div dangerouslySetInnerHTML={{ __html: doc.raw_html }} />
+        ) : (
+          <>
+            {/* Campaign Overview */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Campaign Overview</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                {(
+                  [
+                    ['Brand', doc.campaign_overview?.brand_name],
+                    ['Campaign Name', doc.campaign_overview?.campaign_name],
+                    ['Platforms & Format', doc.campaign_overview?.platforms_and_format],
+                    ['Deliverables', doc.campaign_overview?.deliverables],
+                    ['Deadlines', doc.campaign_overview?.deadlines],
+                  ] as [string, string][]
+                ).map(([label, value]) => (
+                  <div key={label} className={styles.docField}>
+                    <span className={styles.docFieldLabel}>{label}</span>
+                    {val(value)}
                   </div>
-                  <div className={styles.docField}>
-                    <span className={styles.docFieldLabel}>Highlights</span>
-                    {pills(c.highlights)}
+                ))}
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>Objective</span>
+                  {val(doc.campaign_overview?.objective)}
+                </div>
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>Marketing Message</span>
+                  {val(doc.campaign_overview?.marketing_message)}
+                </div>
+              </div>
+            </div>
+
+            {/* Content Angle */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Content Angle</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Story Themes</span>
+                  {pills(doc.content_angle?.story_theme)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>USPs</span>
+                  {pills(doc.content_angle?.usps)}
+                </div>
+                {doc.content_angle?.usp_note && (
+                  <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                    <span className={styles.docFieldLabel}>USP Note</span>
+                    {val(doc.content_angle.usp_note)}
                   </div>
-                  <div className={styles.docField}>
-                    <span className={styles.docFieldLabel}>CTA</span>
-                    <span className={styles.docFieldValue}>{c.cta}</span>
+                )}
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>Suggested Hooks</span>
+                  {pills(doc.content_angle?.suggested_hooks)}
+                </div>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>CTA</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Primary CTA</span>
+                  {val(doc.cta?.primary_cta)}
+                </div>
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Placement</span>
+                  {val(doc.cta?.placement)}
+                </div>
+                <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+                  <span className={styles.docFieldLabel}>CTA Variations</span>
+                  {pills(doc.cta?.suggested_ctas)}
+                </div>
+              </div>
+            </div>
+
+            {/* Content Board */}
+            {(doc.content_board?.length ?? 0) > 0 && (
+              <div className={styles.docSection}>
+                <div className={styles.docSectionHeader}>
+                  <span className={styles.docSectionTitle}>Content Board</span>
+                </div>
+                <div className={styles.docContentBoard}>
+                  {doc.content_board.map((c, i) => (
+                    <div key={i} className={styles.contentBoardCard}>
+                      <div className={styles.contentBoardCardHeader}>{c.title}</div>
+                      <div className={styles.contentBoardCardBody}>
+                        <div className={styles.docField}>
+                          <span className={styles.docFieldLabel}>Concept</span>
+                          <span className={styles.docFieldValue}>{c.concept}</span>
+                        </div>
+                        <div className={styles.docField}>
+                          <span className={styles.docFieldLabel}>Highlights</span>
+                          {pills(c.highlights)}
+                        </div>
+                        <div className={styles.docField}>
+                          <span className={styles.docFieldLabel}>CTA</span>
+                          <span className={styles.docFieldValue}>{c.cta}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Guidelines */}
+            <div className={styles.docSection}>
+              <div className={styles.docSectionHeader}>
+                <span className={styles.docSectionTitle}>Guidelines</span>
+              </div>
+              <div className={styles.docSectionBody}>
+                {(
+                  [
+                    ['Content Notes', doc.guidelines?.content_notes],
+                    ['Timeliness', doc.guidelines?.timeliness],
+                    ['Approval Process', doc.guidelines?.approval_process],
+                    ['Content Usage', doc.guidelines?.content_usage],
+                    ['Community Guidelines', doc.guidelines?.community_guidelines],
+                  ] as [string, string][]
+                ).map(([label, value]) => (
+                  <div
+                    key={label}
+                    className={`${styles.docField}`}
+                    style={{ gridColumn: '1 / -1' }}
+                  >
+                    <span className={styles.docFieldLabel}>{label}</span>
+                    {val(value)}
+                  </div>
+                ))}
+                <div className={styles.docField}>
+                  <span className={styles.docFieldLabel}>Brand Socials</span>
+                  <div className={styles.docPillList}>
+                    {doc.guidelines?.brand_socials?.instagram && (
+                      <span className={styles.docPill}>
+                        IG: {doc.guidelines.brand_socials.instagram}
+                      </span>
+                    )}
+                    {doc.guidelines?.brand_socials?.tiktok && (
+                      <span className={styles.docPill}>
+                        TK: {doc.guidelines.brand_socials.tiktok}
+                      </span>
+                    )}
+                    {doc.guidelines?.brand_socials?.website && (
+                      <span className={styles.docPill}>
+                        🌐 {doc.guidelines.brand_socials.website}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Guidelines */}
-      <div className={styles.docSection}>
-        <div className={styles.docSectionHeader}>
-          <span className={styles.docSectionTitle}>Guidelines</span>
-        </div>
-        <div className={styles.docSectionBody}>
-          {(
-            [
-              ['Content Notes', doc.guidelines?.content_notes],
-              ['Timeliness', doc.guidelines?.timeliness],
-              ['Approval Process', doc.guidelines?.approval_process],
-              ['Content Usage', doc.guidelines?.content_usage],
-              ['Community Guidelines', doc.guidelines?.community_guidelines],
-            ] as [string, string][]
-          ).map(([label, value]) => (
-            <div key={label} className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
-              <span className={styles.docFieldLabel}>{label}</span>
-              {val(value)}
             </div>
-          ))}
-          <div className={styles.docField}>
-            <span className={styles.docFieldLabel}>Brand Socials</span>
-            <div className={styles.docPillList}>
-              {doc.guidelines?.brand_socials?.instagram && (
-                <span className={styles.docPill}>IG: {doc.guidelines.brand_socials.instagram}</span>
-              )}
-              {doc.guidelines?.brand_socials?.tiktok && (
-                <span className={styles.docPill}>TK: {doc.guidelines.brand_socials.tiktok}</span>
-              )}
-              {doc.guidelines?.brand_socials?.website && (
-                <span className={styles.docPill}>🌐 {doc.guidelines.brand_socials.website}</span>
-              )}
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
-    </>
+      {/* docBody */}
+    </div>
   );
 }
 
@@ -1634,10 +1755,19 @@ function DocumentsStage({ leadId }: { leadId: string }) {
   const { data: meeting } = useCampaignMeeting(leadId);
   const { data: _lead } = useCampaignLeadDetail(leadId);
   const qc = useQueryClient();
+  const docRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<Editor | null>(null);
 
   const [activeTab, setActiveTab] = useState<'onboarding' | 'kol_brief'>('onboarding');
   const [generating, setGenerating] = useState<'onboarding' | 'kol_brief' | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendEmail, setSendEmail] = useState('');
+  const [sendSubject, setSendSubject] = useState('');
+  const [sendMessage, setSendMessage] = useState('');
+  const [sending, setSending] = useState(false);
 
   const onboardingDoc = docs?.find((d) => d.type === 'onboarding');
   const hasTranscript =
@@ -1656,6 +1786,116 @@ function DocumentsStage({ leadId }: { leadId: string }) {
     cm_approved: styles.statusApproved,
     admin_approved: styles.statusApproved,
     sent_to_client: styles.statusSent,
+  };
+
+  const handleEditorReady = useCallback((editor: Editor) => {
+    editorRef.current = editor;
+  }, []);
+
+  const handleToggleEdit = () => {
+    if (editMode) {
+      // Cancel — discard changes
+      editorRef.current = null;
+      setEditMode(false);
+    } else {
+      editorRef.current = null;
+      setEditMode(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editorRef.current) return;
+    const editedHTML = editorRef.current.getHTML();
+
+    setSaving(true);
+    try {
+      if (activeTab === 'onboarding' && onboardingDoc) {
+        const updated = await campaignsService.updateOnboardingDocument(onboardingDoc.id, {
+          ...(onboardingDoc.document ?? {}),
+          raw_html: editedHTML,
+        } as typeof onboardingDoc.document);
+        qc.setQueryData(['campaign-documents', leadId], (prev: typeof docs) => {
+          return (prev ?? []).map((d) => (d.id === onboardingDoc.id ? updated : d));
+        });
+      } else if (activeTab === 'kol_brief' && kolBrief) {
+        const updated = await campaignsService.updateKolBriefDocument(kolBrief.id, {
+          ...(kolBrief.document ?? {}),
+          raw_html: editedHTML,
+        } as typeof kolBrief.document);
+        qc.setQueryData(['kol-brief', leadId], updated);
+      }
+      editorRef.current = null;
+      setEditMode(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDownload = useCallback(() => {
+    if (!docRef.current) return;
+    const html = docRef.current.outerHTML;
+    const styleBlocks = Array.from(document.querySelectorAll('style'))
+      .map((el) => `<style>${el.textContent}</style>`)
+      .join('\n');
+    const linkTags = Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
+    )
+      .map((el) => `<link rel="stylesheet" href="${el.href}">`)
+      .join('\n');
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.documentElement.innerHTML = `<head>
+<meta charset="utf-8">
+<title>Document</title>
+${linkTags}
+${styleBlocks}
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; padding: 40px; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @media print { body { padding: 0; } @page { margin: 0; } }
+</style>
+</head>
+<body>${html}</body>`;
+    win.focus();
+    setTimeout(() => win.print(), 600);
+  }, []);
+
+  const getDocHTML = (): string => {
+    if (editorRef.current && editMode) return editorRef.current.getHTML();
+    return docRef.current?.outerHTML ?? '';
+  };
+
+  const handleOpenSendModal = () => {
+    const brandName =
+      activeTab === 'onboarding'
+        ? (onboardingDoc?.document?.brand?.name ?? '')
+        : (kolBrief?.document?.campaign_overview?.brand_name ?? '');
+    const docType = activeTab === 'onboarding' ? 'Onboarding Document' : 'KOL Brief';
+    setSendSubject(`SocialJet ${docType}${brandName ? ` — ${brandName}` : ''}`);
+    setSendEmail('');
+    setSendMessage('');
+    setShowSendModal(true);
+  };
+
+  const handleSend = async () => {
+    const html = getDocHTML();
+    if (!html) return;
+    setSending(true);
+    try {
+      const opts = {
+        toEmail: sendEmail || undefined,
+        subject: sendSubject || undefined,
+        message: sendMessage || undefined,
+      };
+      if (activeTab === 'onboarding') {
+        await campaignsService.sendOnboardingPdf(leadId, html, opts);
+      } else {
+        await campaignsService.sendKolBriefPdf(leadId, html, opts);
+      }
+      setShowSendModal(false);
+    } finally {
+      setSending(false);
+    }
   };
 
   async function handleGenerate(type: 'onboarding' | 'kol_brief') {
@@ -1705,6 +1945,9 @@ function DocumentsStage({ leadId }: { leadId: string }) {
   const isLoading = activeTab === 'onboarding' ? docsLoading : kolLoading;
   const hasDoc = activeTab === 'onboarding' ? !!onboardingDoc?.document : !!kolBrief?.document;
 
+  // Initial HTML for editor — use current rendered card HTML
+  const editorInitialHTML = docRef.current?.outerHTML ?? '';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
@@ -1715,14 +1958,99 @@ function DocumentsStage({ leadId }: { leadId: string }) {
             <span className={`${styles.statusBadge} ${statusStyle[activeStatus] ?? ''}`}>
               {statusLabel[activeStatus] ?? activeStatus}
             </span>
-            {activeStatus === 'draft' && (
-              <button
-                className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
-                disabled={submitting}
-                onClick={activeTab === 'onboarding' ? handleSubmitOnboarding : handleSubmitKolBrief}
-              >
-                {submitting ? 'Submitting…' : 'Send for Approval'}
-              </button>
+
+            {/* Edit / Done / Cancel */}
+            {editMode ? (
+              <>
+                <button
+                  className={`${styles.btn} ${styles.btnSecondary} ${styles.btnSm}`}
+                  onClick={handleToggleEdit}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
+                  disabled={saving}
+                  onClick={handleSaveEdit}
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className={`${styles.docActionIconBtn} ${styles.docActionIconBtnActive}`}
+                  aria-label="Edit document"
+                  onClick={handleToggleEdit}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  Edit
+                </button>
+                <button
+                  className={styles.docActionIconBtn}
+                  aria-label="Download PDF"
+                  onClick={handleDownload}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  PDF
+                </button>
+                <button
+                  className={styles.docActionIconBtn}
+                  aria-label="Send document"
+                  onClick={handleOpenSendModal}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                  Send
+                </button>
+                {activeStatus === 'draft' && (
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
+                    disabled={submitting}
+                    onClick={
+                      activeTab === 'onboarding' ? handleSubmitOnboarding : handleSubmitKolBrief
+                    }
+                  >
+                    {submitting ? 'Submitting…' : 'Send for Approval'}
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
@@ -1732,7 +2060,11 @@ function DocumentsStage({ leadId }: { leadId: string }) {
       <div className={styles.docTabs}>
         <button
           className={`${styles.docTab} ${activeTab === 'onboarding' ? styles.docTabActive : ''}`}
-          onClick={() => setActiveTab('onboarding')}
+          onClick={() => {
+            setActiveTab('onboarding');
+            setEditMode(false);
+            editorRef.current = null;
+          }}
         >
           Onboarding Doc
           {onboardingDoc && (
@@ -1741,7 +2073,11 @@ function DocumentsStage({ leadId }: { leadId: string }) {
         </button>
         <button
           className={`${styles.docTab} ${activeTab === 'kol_brief' ? styles.docTabActive : ''}`}
-          onClick={() => setActiveTab('kol_brief')}
+          onClick={() => {
+            setActiveTab('kol_brief');
+            setEditMode(false);
+            editorRef.current = null;
+          }}
         >
           KOL Brief
           {kolBrief && <span style={{ marginLeft: 6, color: 'var(--color-success-600)' }}>✓</span>}
@@ -1806,17 +2142,101 @@ function DocumentsStage({ leadId }: { leadId: string }) {
               </button>
             )}
           </div>
+        ) : editMode ? (
+          <ProposalEditor
+            key={`doc-editor-${activeTab}`}
+            initialContent={editorInitialHTML}
+            onEditorReady={handleEditorReady}
+          />
         ) : (
           <>
             {activeTab === 'onboarding' && activeDoc?.document && (
-              <OnboardingDocView doc={activeDoc.document} />
+              <OnboardingDocView doc={activeDoc.document} docRef={docRef} />
             )}
             {activeTab === 'kol_brief' && activeKol?.document && (
-              <KolBriefDocView doc={activeKol.document} />
+              <KolBriefDocView doc={activeKol.document} docRef={docRef} />
             )}
           </>
         )}
       </div>
+
+      {/* Send Modal */}
+      {showSendModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowSendModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Send Document</h3>
+              <button className={styles.modalClose} onClick={() => setShowSendModal(false)}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  To Email <span className={styles.formOptional}>(optional)</span>
+                </label>
+                <input
+                  className={styles.formInput}
+                  type="email"
+                  placeholder="client@example.com"
+                  value={sendEmail}
+                  onChange={(e) => setSendEmail(e.target.value)}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  Subject <span className={styles.formOptional}>(optional)</span>
+                </label>
+                <input
+                  className={styles.formInput}
+                  type="text"
+                  value={sendSubject}
+                  onChange={(e) => setSendSubject(e.target.value)}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  Message <span className={styles.formOptional}>(optional)</span>
+                </label>
+                <textarea
+                  className={styles.formTextarea}
+                  rows={3}
+                  placeholder="Add a personal note…"
+                  value={sendMessage}
+                  onChange={(e) => setSendMessage(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+              <button
+                className={`${styles.btn} ${styles.btnSecondary}`}
+                onClick={() => setShowSendModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                disabled={sending}
+                onClick={handleSend}
+              >
+                {sending ? 'Sending…' : 'Send Document'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
