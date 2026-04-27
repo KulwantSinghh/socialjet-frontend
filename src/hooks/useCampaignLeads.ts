@@ -90,6 +90,15 @@ export function useCampaignDocuments(leadId: string) {
   });
 }
 
+export function useKolBrief(leadId: string) {
+  return useQuery({
+    queryKey: ['kol-brief', leadId],
+    queryFn: () => campaignsService.getKolBrief(leadId),
+    staleTime: 15_000,
+    enabled: !!leadId,
+  });
+}
+
 export function useLeadInfluencers(leadId: string) {
   return useQuery({
     queryKey: ['lead-influencers', leadId],
@@ -129,5 +138,27 @@ export function useCampaignConversations() {
     queryKey: ['campaign-conversations'],
     queryFn: () => campaignsService.getConversations(),
     staleTime: 5_000,
+  });
+}
+
+export function useApproveItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, type }: { id: string; type?: string }) =>
+      campaignsService.approveItem(id, type),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['campaign-approvals'] });
+    },
+  });
+}
+
+export function useRejectItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason, type }: { id: string; reason?: string; type?: string }) =>
+      campaignsService.rejectItem(id, reason, type),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['campaign-approvals'] });
+    },
   });
 }

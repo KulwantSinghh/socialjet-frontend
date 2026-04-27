@@ -7,7 +7,9 @@ import styles from './CampaignLeadsList.module.css';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole } from '@/types/roles.types';
 import { leadsService } from '@/services/leads.service';
+import { AssignModal } from '@/components/campaigns/AssignModal';
 import type { Lead } from '@/types/leads.types';
+import type { CampaignLead } from '@/types/campaign.types';
 
 const SOURCE_LABELS: Record<string, string> = {
   whatsapp: 'WhatsApp',
@@ -45,6 +47,7 @@ export function CampaignLeadsList() {
 
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+  const [assigningLead, setAssigningLead] = useState<CampaignLead | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['campaign-closed-leads', search, sourceFilter],
@@ -142,9 +145,10 @@ export function CampaignLeadsList() {
             <tr>
               <th className={styles.th}>Client</th>
               <th className={styles.th}>Status</th>
-              <th className={styles.th}>Contact Person</th>
+              <th className={styles.th}>Assigned CM</th>
               <th className={styles.th}>Source</th>
               <th className={styles.th}>Last Updated</th>
+              {isLead && <th className={styles.th} />}
             </tr>
           </thead>
           <tbody>
@@ -185,17 +189,15 @@ export function CampaignLeadsList() {
                         </span>
                       </td>
 
-                      {/* Contact person */}
+                      {/* Assigned CM */}
                       <td className={styles.td}>
-                        {lead.contact_person ? (
+                        {lead.assigned_cm_id ? (
                           <div className={styles.assignedCell}>
-                            <div className={styles.assignedAvatar}>
-                              {getInitials(lead.contact_person)}
-                            </div>
-                            <span>{lead.contact_person}</span>
+                            <div className={styles.assignedAvatar}>CM</div>
+                            <span className={styles.assignedName}>Assigned</span>
                           </div>
                         ) : (
-                          <span className={styles.unassigned}>—</span>
+                          <span className={styles.unassigned}>Unassigned</span>
                         )}
                       </td>
 
@@ -204,6 +206,31 @@ export function CampaignLeadsList() {
 
                       {/* Last updated */}
                       <td className={styles.td}>{formatDate(lead.updated_at)}</td>
+
+                      {/* Assign action — CM Lead only */}
+                      {isLead && (
+                        <td className={styles.td} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className={styles.assignRowBtn}
+                            onClick={() =>
+                              setAssigningLead({
+                                id: lead.lead_id,
+                                clientName: lead.name,
+                                clientEmail: lead.email ?? '',
+                                clientCompany: lead.company ?? '',
+                                stage: 'unassigned',
+                                priority: 'medium',
+                                source: lead.source,
+                                createdAt: lead.created_at,
+                                updatedAt: lead.updated_at,
+                                stageUpdatedAt: lead.updated_at,
+                              })
+                            }
+                          >
+                            {lead.assigned_cm_id ? 'Reassign' : 'Assign CM'}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -217,6 +244,8 @@ export function CampaignLeadsList() {
           </tbody>
         </table>
       </div>
+
+      {assigningLead && <AssignModal lead={assigningLead} onClose={() => setAssigningLead(null)} />}
     </div>
   );
 }

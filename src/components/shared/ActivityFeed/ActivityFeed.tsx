@@ -100,8 +100,8 @@ function ActivityItem({ item }: { item: SalesActivity }) {
   const isZoom = item.activity_type === 'zoom_transcript_ready';
 
   const { title, duration } = isZoom
-    ? parseMeetingDescription(item.description)
-    : { title: item.description, duration: null };
+    ? parseMeetingDescription(item.description ?? '')
+    : { title: item.description ?? '', duration: null };
 
   return (
     <div className={styles.item}>

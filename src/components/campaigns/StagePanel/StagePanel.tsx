@@ -6,12 +6,21 @@ import {
   useQuestionnaire,
   useCampaignMeeting,
   useCampaignDocuments,
+  useKolBrief,
   useLeadInfluencers,
   useLeadContent,
+  useCampaignLeadDetail,
+  useCampaignManagers,
+  CAMPAIGN_LEADS_KEY,
 } from '@/hooks/useCampaignLeads';
 import { campaignsService } from '@/services/campaigns.service';
 import { useQueryClient } from '@tanstack/react-query';
-import type { CampaignLeadStage, CampaignInfluencer } from '@/types/campaign.types';
+import type {
+  CampaignLeadStage,
+  CampaignInfluencer,
+  OnboardingDocument,
+  KolBriefDocument,
+} from '@/types/campaign.types';
 
 function formatFollowers(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -19,79 +28,564 @@ function formatFollowers(n: number) {
   return String(n);
 }
 
+// ─── Lead Stage (unassigned / assigned) ──────────────────────────────────────
+function LeadStage({ leadId }: { leadId: string }) {
+  const { data: lead, isLoading } = useCampaignLeadDetail(leadId);
+  const { data: managers } = useCampaignManagers();
+
+  // Backend only stores assigned_cm_id — enrich with name/email from managers list
+  const assignedCmId = (lead?.assignedTo as { id?: string } | undefined)?.id;
+  const enrichedCm = assignedCmId
+    ? (managers?.find((m) => m.id === assignedCmId) ?? lead?.assignedTo)
+    : undefined;
+
+  function getInitials(name: string) {
+    return name
+      .split(' ')
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  if (isLoading) {
+    return (
+      <div className={styles.leadCard}>
+        {[180, 140, 120, 160].map((w, i) => (
+          <div
+            key={i}
+            className={styles.shimmer}
+            style={{ height: 16, width: w, marginBottom: 12 }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (!lead) return null;
+
+  const rows: { label: string; value: string | undefined }[] = [
+    { label: 'Company', value: lead.clientCompany },
+    { label: 'Email', value: lead.clientEmail },
+    { label: 'Source', value: lead.source },
+    { label: 'Priority', value: lead.priority },
+    {
+      label: 'Created',
+      value: lead.createdAt
+        ? new Date(lead.createdAt).toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
+        : undefined,
+    },
+  ];
+
+  return (
+    <div className={styles.leadCard}>
+      {/* Client header */}
+      <div className={styles.leadCardHeader}>
+        <div className={styles.leadCardAvatar}>{getInitials(lead.clientName)}</div>
+        <div>
+          <div className={styles.leadCardName}>{lead.clientName}</div>
+          <div className={styles.leadCardCompany}>{lead.clientCompany}</div>
+        </div>
+        <span className={`${styles.leadCardBadge} ${styles[`priority_${lead.priority}`]}`}>
+          {lead.priority}
+        </span>
+      </div>
+
+      {/* Info rows */}
+      <div className={styles.leadCardRows}>
+        {rows.map(({ label, value }) =>
+          value ? (
+            <div key={label} className={styles.leadCardRow}>
+              <span className={styles.leadCardRowLabel}>{label}</span>
+              <span className={styles.leadCardRowValue}>{value}</span>
+            </div>
+          ) : null
+        )}
+      </div>
+
+      {/* Assignment status */}
+      <div className={styles.leadCardSection}>
+        <div className={styles.leadCardSectionTitle}>Campaign Manager</div>
+        {enrichedCm ? (
+          <div className={styles.cmAssigned}>
+            <div className={styles.cmAssignedAvatar}>
+              {getInitials((enrichedCm as { name: string }).name || 'CM')}
+            </div>
+            <div>
+              <div className={styles.cmAssignedName}>
+                {(enrichedCm as { name: string }).name || 'Campaign Manager'}
+              </div>
+              <div className={styles.cmAssignedEmail}>
+                {(enrichedCm as { email: string }).email}
+              </div>
+            </div>
+            <span className={styles.cmAssignedBadge}>Assigned</span>
+          </div>
+        ) : (
+          <div className={styles.cmUnassigned}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+            No Campaign Manager assigned yet — use <strong>Assign CM</strong> in the top bar
+          </div>
+        )}
+      </div>
+
+      {/* Next step hint */}
+      {!enrichedCm && (
+        <div className={styles.leadCardNext}>
+          <strong>Next step:</strong> Assign a Campaign Manager to begin the onboarding workflow.
+        </div>
+      )}
+      {enrichedCm && (
+        <div className={styles.leadCardNext}>
+          <strong>Next step:</strong> Click <em>Questionnaire Sent</em> in the timeline to send the
+          client questionnaire.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Questionnaire branded HTML builder ───────────────────────────────────────
+function buildQuestionnaireHtml(
+  questions: { question: string }[],
+  lead: { clientName: string; clientCompany: string; clientEmail: string },
+  sentDate: string
+): string {
+  const rows = questions
+    .map(
+      (q, i) => `
+      <tr>
+        <td style="padding:14px 0;border-bottom:1px solid #f0f0f0;vertical-align:top;">
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Q${i + 1}</div>
+          <div style="font-size:15px;color:#1a1a1a;font-weight:500;">${q.question}</div>
+          <div style="margin-top:10px;background:#f9f9f9;border:1px solid #e5e5e5;border-radius:6px;padding:12px;min-height:40px;color:#999;font-size:13px;">(Your answer here)</div>
+        </td>
+      </tr>`
+    )
+    .join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#7c3aed,#a855f7);padding:32px 40px;">
+            <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">SocialJet</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px;">Go Viral With Influencers</div>
+            <div style="margin-top:20px;font-size:18px;font-weight:600;color:#ffffff;">Campaign Questionnaire</div>
+            <div style="margin-top:4px;font-size:13px;color:rgba(255,255,255,0.8);">Sent on ${sentDate}</div>
+          </td>
+        </tr>
+
+        <!-- Client info -->
+        <tr>
+          <td style="padding:28px 40px 0;border-bottom:1px solid #f0f0f0;">
+            <div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Prepared for</div>
+            <div style="font-size:16px;font-weight:600;color:#1a1a1a;">${lead.clientName}</div>
+            <div style="font-size:13px;color:#666;margin-top:2px;">${lead.clientCompany} &nbsp;·&nbsp; ${lead.clientEmail}</div>
+            <div style="margin-top:16px;font-size:13px;color:#555;line-height:1.6;padding-bottom:20px;">
+              Hi ${lead.clientName},<br/><br/>
+              To help us design the perfect influencer campaign for <strong>${lead.clientCompany}</strong>, please fill in the questionnaire below and reply to this email with your answers.
+            </div>
+          </td>
+        </tr>
+
+        <!-- Questions -->
+        <tr>
+          <td style="padding:0 40px 8px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              ${rows}
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 40px;background:#fafafa;border-top:1px solid #f0f0f0;">
+            <div style="font-size:12px;color:#999;text-align:center;">
+              SocialJet · Influencer Marketing Platform<br/>
+              Reply to this email with your answers or contact your Campaign Manager directly.
+            </div>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// ─── Default onboarding questions ────────────────────────────────────────────
+const DEFAULT_QUESTIONS = [
+  {
+    id: 'dq1',
+    question: 'Website / Instagram / Campaign Information',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq2',
+    question: 'Define the marketing objectives / goals you are trying to hit with this campaign',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq3',
+    question: 'Briefly describe your Target Audience / Customer Persona',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq4',
+    question: 'Values / Benefits of the products / services',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq5',
+    question: 'What is your marketing message, or what would you like to convey?',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq6',
+    question: 'What sets the business apart from competitors in the industry?',
+    answer: undefined,
+    type: 'text',
+  },
+  { id: 'dq7', question: 'Pain points of current customers', answer: undefined, type: 'text' },
+  {
+    id: 'dq8',
+    question: 'Is there a preferred age range for the Influencers of this campaign?',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq9',
+    question: 'Can you briefly describe an ideal Influencer for this campaign?',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq10',
+    question: 'Do you have any examples of KOLs you would like to share or keen to explore?',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq11',
+    question: 'Are there any no-gos for your Influencers? (e.g. no tattoos / coloured hair etc)',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq12',
+    question:
+      'Is there an offer? (free trial / promo / etc), and what is the target price? Also — where can Influencers lead the CTA? (website / link)',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq13',
+    question:
+      'What type of content resonates the most with your target audience? (e.g. unboxing, tutorial, vlog)',
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq14',
+    question:
+      "Is there a specific publishing date / timeline for the Influencers' content to go live?",
+    answer: undefined,
+    type: 'text',
+  },
+  {
+    id: 'dq15',
+    question:
+      'Optional: Are we planning to boost after the campaign? (e.g. right away, a week after the first KOL posts, only low/high performing ones)',
+    answer: undefined,
+    type: 'text',
+  },
+  { id: 'dq16', question: 'Comments from Client', answer: undefined, type: 'text' },
+  { id: 'dq17', question: 'Questions from Client', answer: undefined, type: 'text' },
+  { id: 'dq18', question: 'SJ Action Plan', answer: undefined, type: 'text' },
+];
+
 // ─── Questionnaire Stage ──────────────────────────────────────────────────────
 function QuestionnaireStage({ leadId }: { leadId: string }) {
   const { data: q, isLoading } = useQuestionnaire(leadId);
+  const { data: lead } = useCampaignLeadDetail(leadId);
   const qc = useQueryClient();
 
-  async function handleSend() {
-    await campaignsService.sendQuestionnaire(leadId);
+  const [editing, setEditing] = useState(false);
+  const [editedQuestions, setEditedQuestions] = useState<
+    { question_id: string; question: string; answer?: string; type: string }[]
+  >([]);
+  const [sending, setSending] = useState(false);
+  const [markingReceived, setMarkingReceived] = useState(false);
+
+  const isSent = !!q?.sentAt;
+  const isReceived = !!q?.receivedAt;
+
+  function startEdit() {
+    if (editedQuestions.length > 0) {
+      setEditing(true);
+      return;
+    }
+    setEditedQuestions(
+      DEFAULT_QUESTIONS.map((item) => ({
+        question_id: item.id,
+        question: item.question,
+        answer: item.answer,
+        type: item.type,
+      }))
+    );
+    setEditing(true);
+  }
+
+  async function saveEdits() {
+    await campaignsService.updateQuestionnaire(leadId, editedQuestions as never);
     qc.invalidateQueries({ queryKey: ['campaign-questionnaire', leadId] });
+    setEditing(false);
+  }
+
+  async function handleSend() {
+    if (!lead) return;
+    const activeQuestions = DEFAULT_QUESTIONS;
+    setSending(true);
+    try {
+      const sentDate = new Date().toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      const html = buildQuestionnaireHtml(
+        activeQuestions.map((item) => ({ question: item.question })),
+        {
+          clientName: lead.clientName,
+          clientCompany: lead.clientCompany,
+          clientEmail: lead.clientEmail,
+        },
+        sentDate
+      );
+      await campaignsService.sendQuestionnaire(leadId, html);
+      qc.invalidateQueries({ queryKey: ['campaign-questionnaire', leadId] });
+      qc.invalidateQueries({ queryKey: [CAMPAIGN_LEADS_KEY, leadId] });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleMarkReceived() {
+    setMarkingReceived(true);
+    try {
+      await campaignsService.markQuestionnaireReceived(leadId);
+      qc.invalidateQueries({ queryKey: ['campaign-questionnaire', leadId] });
+      qc.invalidateQueries({ queryKey: [CAMPAIGN_LEADS_KEY, leadId] });
+    } finally {
+      setMarkingReceived(false);
+    }
   }
 
   if (isLoading) return <StageSkeleton />;
 
-  const isSent = !!q?.sentAt;
-  const isReceived = !!q?.receivedAt;
+  // Questions are always defined in the frontend template.
+  // Backend stores only sent_at / received_at timestamps — not the questions.
+  const questions = DEFAULT_QUESTIONS;
 
   return (
     <>
       <div className={styles.stageHeader}>
         <h2 className={styles.stageTitle}>Questionnaire</h2>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+        <div className={styles.stageHeaderActions}>
           {isReceived ? (
-            <span className={`${styles.statusBadge} ${styles.statusReceived}`}>Received</span>
+            <span className={`${styles.statusBadge} ${styles.statusReceived}`}>✓ Received</span>
           ) : isSent ? (
-            <span className={`${styles.statusBadge} ${styles.statusSent}`}>Sent</span>
+            <>
+              <span className={`${styles.statusBadge} ${styles.statusSent}`}>Sent to Client</span>
+              <button
+                className={`${styles.btn} ${styles.btnSecondary}`}
+                onClick={handleMarkReceived}
+                disabled={markingReceived}
+              >
+                {markingReceived ? 'Marking…' : '✓ Mark as Received'}
+              </button>
+            </>
           ) : (
-            <span className={`${styles.statusBadge} ${styles.statusDraft}`}>Not sent</span>
+            <span className={`${styles.statusBadge} ${styles.statusDraft}`}>Draft</span>
+          )}
+          {!editing && (
+            <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={startEdit}>
+              ✏ Edit Questions
+            </button>
           )}
           {!isSent && (
-            <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleSend}>
-              Send to Client
+            <button
+              className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={handleSend}
+              disabled={sending}
+            >
+              {sending ? 'Sending…' : '✉ Send to Client'}
             </button>
           )}
         </div>
       </div>
+
       <div className={styles.stageBody}>
+        {/* Sent metadata */}
         {isSent && (
-          <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Sent</span>
-              <span className={styles.infoValue}>
-                {new Date(q!.sentAt!).toLocaleDateString('en-US', {
+          <div className={styles.sentMeta}>
+            <span>
+              Sent on{' '}
+              {new Date(q!.sentAt!).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </span>
+            {isReceived && (
+              <span className={styles.receivedDot}>
+                · Responses received{' '}
+                {new Date(q!.receivedAt!).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric',
                 })}
               </span>
-            </div>
-            {isReceived && (
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>Received</span>
-                <span className={styles.infoValue}>
-                  {new Date(q!.receivedAt!).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </span>
-              </div>
             )}
           </div>
         )}
-        <div className={styles.questionList}>
-          {(q?.questions ?? []).map((item) => (
-            <div key={item.id} className={styles.questionItem}>
-              <div className={styles.questionText}>{item.question}</div>
-              <div
-                className={`${styles.questionAnswer} ${!item.answer ? styles.questionEmpty : ''}`}
+
+        {/* Edit mode */}
+        {editing && (
+          <div className={styles.editBlock}>
+            <p className={styles.editHint}>
+              Edit the questions below. The client will see these exact questions in the email.
+            </p>
+            {editedQuestions.map((item, i) => (
+              <div key={item.question_id} className={styles.questionItem}>
+                <label className={styles.questionLabel}>Question {i + 1}</label>
+                <input
+                  className={styles.questionEditInput}
+                  value={item.question}
+                  onChange={(e) => {
+                    const copy = [...editedQuestions];
+                    copy[i] = { ...copy[i], question: e.target.value };
+                    setEditedQuestions(copy);
+                  }}
+                />
+              </div>
+            ))}
+            <div className={styles.editActions}>
+              <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={saveEdits}>
+                Save Questions
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnSecondary}`}
+                onClick={() => setEditing(false)}
               >
-                {item.answer ?? 'Awaiting response…'}
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Branded email preview */}
+        {!editing && (
+          <>
+            {!isSent && (
+              <div className={styles.previewLabel}>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                Email preview — this is exactly what the client will receive
+              </div>
+            )}
+            <div className={styles.qEmailPreview}>
+              {/* Branded header */}
+              <div className={styles.qEmailHeader}>
+                <div className={styles.qEmailBrand}>
+                  <span className={styles.qEmailLogo}>SocialJet</span>
+                  <span className={styles.qEmailTagline}>Go Viral With Influencers</span>
+                </div>
+                <div className={styles.qEmailTitle}>Campaign Questionnaire</div>
+                {lead && (
+                  <div className={styles.qEmailMeta}>
+                    Prepared for {lead.clientName} · {lead.clientCompany}
+                  </div>
+                )}
+              </div>
+
+              {/* Greeting */}
+              {lead && (
+                <div className={styles.qEmailGreeting}>
+                  Hi <strong>{lead.clientName}</strong>,<br />
+                  To design the perfect influencer campaign for{' '}
+                  <strong>{lead.clientCompany}</strong>, please answer the questions below and reply
+                  to this email.
+                </div>
+              )}
+
+              {/* Questions */}
+              <div className={styles.qEmailQuestions}>
+                {questions.map((item, i) => (
+                  <div key={item.id} className={styles.qEmailQuestion}>
+                    <div className={styles.qEmailQNum}>Q{i + 1}</div>
+                    <div className={styles.qEmailQBody}>
+                      <div className={styles.qEmailQText}>{item.question}</div>
+                      {isReceived ? (
+                        <div
+                          className={`${styles.qEmailAnswer} ${!item.answer ? styles.qEmailAnswerEmpty : ''}`}
+                        >
+                          {item.answer ?? 'No answer provided'}
+                        </div>
+                      ) : isSent ? (
+                        <div className={styles.qEmailAnswerPending}>Awaiting client response…</div>
+                      ) : (
+                        <div className={styles.qEmailAnswerPlaceholder}>
+                          (Client will fill this in)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className={styles.qEmailFooter}>
+                SocialJet · Influencer Marketing Platform · Reply to this email with your answers
               </div>
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
     </>
   );
@@ -100,157 +594,1034 @@ function QuestionnaireStage({ leadId }: { leadId: string }) {
 // ─── Meeting Stage ────────────────────────────────────────────────────────────
 function MeetingStage({ leadId }: { leadId: string }) {
   const { data: meeting, isLoading } = useCampaignMeeting(leadId);
+  const { data: lead } = useCampaignLeadDetail(leadId);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
+  const [duration, setDuration] = useState('60');
   const [emails, setEmails] = useState('');
+  const [booking, setBooking] = useState(false);
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [report, setReport] = useState<Record<string, unknown> | null>(null);
+  const [loadingTranscript, setLoadingTranscript] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'transcript' | 'report'>('transcript');
   const qc = useQueryClient();
 
+  // Auto-fill client email when booking form opens
+  function openBooking() {
+    setEmails(lead?.clientEmail ?? '');
+    setShowSchedule(true);
+  }
+
   async function handleSchedule() {
-    await campaignsService.scheduleMeeting(leadId, {
-      scheduledAt,
-      inviteEmails: emails
-        .split(',')
-        .map((e) => e.trim())
-        .filter(Boolean),
-    });
-    qc.invalidateQueries({ queryKey: ['campaign-meeting', leadId] });
-    setShowSchedule(false);
+    if (!scheduledAt) return;
+    setBooking(true);
+    try {
+      await campaignsService.scheduleMeeting(leadId, {
+        scheduledAt,
+        inviteEmails: emails
+          .split(',')
+          .map((e) => e.trim())
+          .filter(Boolean),
+        durationMinutes: Number(duration),
+      });
+      qc.invalidateQueries({ queryKey: ['campaign-meeting', leadId] });
+      qc.invalidateQueries({ queryKey: ['campaign-leads', leadId] });
+      setShowSchedule(false);
+    } finally {
+      setBooking(false);
+    }
+  }
+
+  async function fetchTranscript() {
+    if (!meeting?.id) return;
+    setLoadingTranscript(true);
+    try {
+      const data = await import('@/services/api/client').then(({ apiClient }) =>
+        apiClient.get(`/meetings/${meeting.id}/transcript`).then((r) => r.data)
+      );
+      setTranscript(
+        (data as { raw_transcript?: string; transcript?: string }).raw_transcript ??
+          (data as { transcript?: string }).transcript ??
+          'No transcript content.'
+      );
+    } catch {
+      setTranscript('Transcript not available yet.');
+    } finally {
+      setLoadingTranscript(false);
+    }
+  }
+
+  async function fetchReport() {
+    if (!meeting?.id) return;
+    setLoadingReport(true);
+    try {
+      const data = await import('@/services/api/client').then(({ apiClient }) =>
+        apiClient.post(`/meetings/${meeting.id}/report`).then((r) => r.data)
+      );
+      setReport(data as Record<string, unknown>);
+    } catch {
+      setReport({ error: 'Report not available yet. Transcript may still be processing.' });
+    } finally {
+      setLoadingReport(false);
+    }
+  }
+
+  async function openSidebar() {
+    setSidebarOpen(true);
+    setActiveTab('transcript');
+    // Auto-fetch both in parallel when sidebar opens
+    if (meeting?.id) {
+      if (!transcript) {
+        setLoadingTranscript(true);
+        import('@/services/api/client')
+          .then(({ apiClient }) =>
+            apiClient.get(`/meetings/${meeting.id}/transcript`).then((r) => r.data)
+          )
+          .then((data) => {
+            const t =
+              (data as { raw_transcript?: string; transcript?: string }).raw_transcript ??
+              (data as { transcript?: string }).transcript ??
+              '';
+            setTranscript(t || null);
+            // Auto-fetch report after transcript
+            if (t && !report) {
+              setLoadingReport(true);
+              import('@/services/api/client')
+                .then(({ apiClient }) =>
+                  apiClient.post(`/meetings/${meeting.id}/report`).then((r) => r.data)
+                )
+                .then((rd) => setReport(rd as Record<string, unknown>))
+                .catch(() => setReport({ error: 'Report not available yet.' }))
+                .finally(() => setLoadingReport(false));
+            }
+          })
+          .catch(() => setTranscript(null))
+          .finally(() => setLoadingTranscript(false));
+      } else if (!report) {
+        fetchReport();
+      }
+    }
   }
 
   if (isLoading) return <StageSkeleton />;
 
-  const isScheduled = meeting?.status === 'scheduled';
-  const isDone = meeting?.status === 'completed';
+  const isBooked = !!meeting?.id && ['upcoming', 'scheduled'].includes(meeting.status ?? '');
+  const isDone = ['completed', 'done'].includes(meeting?.status ?? '');
+  const hasInsights = isBooked || isDone;
 
   return (
-    <>
-      <div className={styles.stageHeader}>
-        <h2 className={styles.stageTitle}>Meeting</h2>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          {isDone ? (
-            <span className={`${styles.statusBadge} ${styles.statusCompleted}`}>Completed</span>
-          ) : isScheduled ? (
-            <span className={`${styles.statusBadge} ${styles.statusScheduled}`}>Scheduled</span>
-          ) : (
-            <span className={`${styles.statusBadge} ${styles.statusDraft}`}>Not Scheduled</span>
-          )}
-          {!isScheduled && !isDone && (
-            <button
-              className={`${styles.btn} ${styles.btnPrimary}`}
-              onClick={() => setShowSchedule(true)}
-            >
-              Book Meeting
-            </button>
-          )}
+    <div className={styles.meetingLayout}>
+      {/* ── Main content ── */}
+      <div className={styles.meetingMain}>
+        <div className={styles.stageHeader}>
+          <h2 className={styles.stageTitle}>Meeting</h2>
+          <div className={styles.stageHeaderActions}>
+            {isDone ? (
+              <span className={`${styles.statusBadge} ${styles.statusCompleted}`}>✓ Completed</span>
+            ) : isBooked ? (
+              <span className={`${styles.statusBadge} ${styles.statusScheduled}`}>Booked</span>
+            ) : (
+              <span className={`${styles.statusBadge} ${styles.statusDraft}`}>Not Scheduled</span>
+            )}
+            {hasInsights && (
+              <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={openSidebar}>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                Transcript & Report
+              </button>
+            )}
+            {!isBooked && !isDone && (
+              <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={openBooking}>
+                Book Meeting
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-      <div className={styles.stageBody}>
-        {(isScheduled || isDone) && meeting && (
-          <div className={styles.meetingCard}>
-            <div className={styles.meetingRow}>
-              <span className={styles.meetingLabel}>Date & Time</span>
-              <span className={styles.meetingValue}>
-                {new Date(meeting.scheduledAt!).toLocaleString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-            <div className={styles.meetingRow}>
-              <span className={styles.meetingLabel}>Duration</span>
-              <span className={styles.meetingValue}>{meeting.duration ?? 60} min</span>
-            </div>
-            {meeting.zoomLink && (
-              <div className={styles.meetingRow}>
-                <span className={styles.meetingLabel}>Zoom</span>
+
+        <div className={styles.stageBody}>
+          {/* Booked meeting details */}
+          {(isBooked || isDone) && meeting && (
+            <div className={styles.meetingCard}>
+              {meeting.zoomLink && !isDone && (
                 <a
                   href={meeting.zoomLink}
                   target="_blank"
                   rel="noreferrer"
-                  className={styles.zoomLink}
+                  className={styles.joinMeetingBtn}
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.914L15 14M3 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z" />
                   </svg>
-                  Join Zoom
+                  Join Onboarding Meeting
                 </a>
-              </div>
-            )}
-            {isDone && meeting.transcriptUrl && (
-              <div className={styles.meetingRow}>
-                <span className={styles.meetingLabel}>Transcript</span>
-                <a
-                  href={meeting.transcriptUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={styles.zoomLink}
-                >
-                  View Transcript
-                </a>
-              </div>
-            )}
-            {isDone && meeting.reportUrl && (
-              <div className={styles.meetingRow}>
-                <span className={styles.meetingLabel}>Report</span>
-                <a
-                  href={meeting.reportUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={styles.zoomLink}
-                >
-                  View Report
-                </a>
-              </div>
-            )}
-          </div>
-        )}
-
-        {showSchedule && (
-          <div className={styles.meetingCard}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              <div className={styles.infoItem}>
-                <label className={styles.infoLabel}>Date & Time</label>
-                <input
-                  type="datetime-local"
-                  className={styles.questionAnswer}
-                  value={scheduledAt}
-                  onChange={(e) => setScheduledAt(e.target.value)}
-                />
-              </div>
-              <div className={styles.infoItem}>
-                <label className={styles.infoLabel}>Invite Emails (comma-separated)</label>
-                <input
-                  type="text"
-                  className={styles.questionAnswer}
-                  placeholder="client@email.com, team@company.com"
-                  value={emails}
-                  onChange={(e) => setEmails(e.target.value)}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleSchedule}>
-                  Confirm & Book
-                </button>
-                <button
-                  className={`${styles.btn} ${styles.btnSecondary}`}
-                  onClick={() => setShowSchedule(false)}
-                >
-                  Cancel
-                </button>
+              )}
+              <div className={styles.meetingDetails}>
+                {meeting.scheduledAt && (
+                  <div className={styles.meetingRow}>
+                    <span className={styles.meetingLabel}>Date & Time</span>
+                    <span className={styles.meetingValue}>
+                      {new Date(meeting.scheduledAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                )}
+                <div className={styles.meetingRow}>
+                  <span className={styles.meetingLabel}>Duration</span>
+                  <span className={styles.meetingValue}>{meeting.duration ?? 60} min</span>
+                </div>
+                <div className={styles.meetingRow}>
+                  <span className={styles.meetingLabel}>Status</span>
+                  <span className={styles.meetingStatusPill}>{meeting.status ?? 'upcoming'}</span>
+                </div>
+                <div className={styles.meetingRow}>
+                  <span className={styles.meetingLabel}>Type</span>
+                  <span className={styles.meetingValue}>Onboarding Call</span>
+                </div>
               </div>
             </div>
+          )}
+
+          {/* Booking form */}
+          {showSchedule && (
+            <div className={styles.meetingCard}>
+              <h3 className={styles.meetingFormTitle}>Book a Meeting</h3>
+              <div className={styles.meetingForm}>
+                <div className={styles.meetingFormRow}>
+                  <label className={styles.meetingLabel}>Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    className={styles.meetingInput}
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
+                </div>
+                <div className={styles.meetingFormRow}>
+                  <label className={styles.meetingLabel}>Duration (minutes)</label>
+                  <select
+                    className={styles.meetingInput}
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                  >
+                    <option value="30">30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">60 min</option>
+                    <option value="90">90 min</option>
+                  </select>
+                </div>
+                <div className={styles.meetingFormRow}>
+                  <label className={styles.meetingLabel}>Invite Emails</label>
+                  <input
+                    type="text"
+                    className={styles.meetingInput}
+                    placeholder="email@example.com, another@example.com"
+                    value={emails}
+                    onChange={(e) => setEmails(e.target.value)}
+                  />
+                  <span className={styles.meetingInputHint}>
+                    Client email pre-filled — add more if needed
+                  </span>
+                </div>
+                <div className={styles.meetingFormActions}>
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimary}`}
+                    onClick={handleSchedule}
+                    disabled={!scheduledAt || booking}
+                  >
+                    {booking ? 'Booking…' : 'Confirm & Book'}
+                  </button>
+                  <button
+                    className={`${styles.btn} ${styles.btnSecondary}`}
+                    onClick={() => setShowSchedule(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Right Sidebar ── */}
+      {sidebarOpen && (
+        <div className={styles.insightsSidebar}>
+          {/* Header */}
+          <div className={styles.sidebarHeader}>
+            <div>
+              <div className={styles.sidebarTitle}>Meeting Insights</div>
+              <div className={styles.sidebarSubtitle}>Transcript &amp; AI analysis</div>
+            </div>
+            <button className={styles.sidebarClose} onClick={() => setSidebarOpen(false)}>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
-        )}
+
+          {/* Tabs */}
+          <div className={styles.sidebarTabBar}>
+            <button
+              className={`${styles.sidebarTab} ${activeTab === 'transcript' ? styles.sidebarTabActive : ''}`}
+              onClick={() => setActiveTab('transcript')}
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              Transcript
+              {loadingTranscript && <span className={styles.tabSpinner} />}
+              {transcript && !loadingTranscript && <span className={styles.tabDot} />}
+            </button>
+            <button
+              className={`${styles.sidebarTab} ${activeTab === 'report' ? styles.sidebarTabActive : ''}`}
+              onClick={() => setActiveTab('report')}
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4l3 3" />
+              </svg>
+              AI Report
+              {loadingReport && <span className={styles.tabSpinner} />}
+              {report && !loadingReport && !('error' in report) && (
+                <span className={styles.tabDot} />
+              )}
+            </button>
+          </div>
+
+          {/* Transcript tab */}
+          {activeTab === 'transcript' && (
+            <div className={styles.sidebarContent}>
+              {loadingTranscript ? (
+                <div className={styles.sidebarLoading}>
+                  <div className={styles.sidebarSpinner} />
+                  <span>Fetching transcript…</span>
+                </div>
+              ) : transcript ? (
+                <>
+                  <div className={styles.sidebarContentActions}>
+                    <span className={styles.sidebarHint}>Zoom-processed recording</span>
+                    <button
+                      className={`${styles.btn} ${styles.btnSecondary} ${styles.btnSm}`}
+                      onClick={fetchTranscript}
+                    >
+                      ↻ Refresh
+                    </button>
+                  </div>
+                  <pre className={styles.transcriptBox}>{transcript}</pre>
+                </>
+              ) : (
+                <div className={styles.sidebarEmpty}>
+                  <div className={styles.sidebarEmptyIcon}>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                  </div>
+                  <div className={styles.sidebarEmptyTitle}>No transcript yet</div>
+                  <div className={styles.sidebarEmptyText}>
+                    The transcript is generated automatically after the meeting ends and Zoom
+                    processes the recording.
+                  </div>
+                  <button
+                    className={`${styles.btn} ${styles.btnSecondary}`}
+                    onClick={fetchTranscript}
+                  >
+                    Fetch Transcript
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* AI Report tab */}
+          {activeTab === 'report' && (
+            <div className={styles.sidebarContent}>
+              {loadingReport ? (
+                <div className={styles.sidebarLoading}>
+                  <div className={styles.sidebarSpinner} />
+                  <span>Generating AI report…</span>
+                </div>
+              ) : report && !('error' in report) ? (
+                <>
+                  <div className={styles.sidebarContentActions}>
+                    <span className={styles.sidebarHint}>AI-generated from transcript</span>
+                    <button
+                      className={`${styles.btn} ${styles.btnSecondary} ${styles.btnSm}`}
+                      onClick={fetchReport}
+                    >
+                      ↻ Regenerate
+                    </button>
+                  </div>
+                  <div className={styles.aiReportBody}>
+                    {/* Summary — full width card */}
+                    {!!report.summary && (
+                      <div className={styles.aiReportSummary}>
+                        <div className={styles.aiReportSectionLabel}>Summary</div>
+                        <p className={styles.aiReportSummaryText}>{String(report.summary)}</p>
+                      </div>
+                    )}
+                    {/* Key points */}
+                    {Array.isArray(report.key_points) && report.key_points.length > 0 && (
+                      <div className={styles.aiReportSection}>
+                        <div className={styles.aiReportSectionLabel}>Key Points</div>
+                        <ul className={styles.aiReportList}>
+                          {(report.key_points as string[]).map((pt, i) => (
+                            <li key={i} className={styles.aiReportListItem}>
+                              <span className={styles.aiReportBullet} />
+                              {pt}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* Next steps */}
+                    {Array.isArray(report.next_steps) && report.next_steps.length > 0 && (
+                      <div className={styles.aiReportSection}>
+                        <div className={styles.aiReportSectionLabel}>Next Steps</div>
+                        <ul className={styles.aiReportList}>
+                          {(report.next_steps as string[]).map((s, i) => (
+                            <li key={i} className={styles.aiReportListItem}>
+                              <span
+                                className={`${styles.aiReportBullet} ${styles.aiReportBulletStep}`}
+                              >
+                                {i + 1}
+                              </span>
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* Sentiment + other string fields */}
+                    <div className={styles.aiReportMeta}>
+                      {Object.entries(report)
+                        .filter(
+                          ([k]) =>
+                            !['summary', 'key_points', 'next_steps', 'meeting_id'].includes(k)
+                        )
+                        .map(([key, val]) =>
+                          typeof val === 'string' ? (
+                            <div key={key} className={styles.aiReportMetaItem}>
+                              <span className={styles.aiReportMetaLabel}>
+                                {key.replace(/_/g, ' ')}
+                              </span>
+                              <span className={styles.aiReportMetaValue}>{val}</span>
+                            </div>
+                          ) : null
+                        )}
+                    </div>
+                  </div>
+                </>
+              ) : report && 'error' in report ? (
+                <div className={styles.sidebarEmpty}>
+                  <div
+                    className={styles.sidebarEmptyIcon}
+                    style={{ color: 'var(--color-warning-500, #f59e0b)' }}
+                  >
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                  </div>
+                  <div className={styles.sidebarEmptyTitle}>Report unavailable</div>
+                  <div className={styles.sidebarEmptyText}>{report.error as string}</div>
+                  <button
+                    className={`${styles.btn} ${styles.btnSecondary}`}
+                    onClick={fetchReport}
+                    disabled={!transcript}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.sidebarEmpty}>
+                  <div className={styles.sidebarEmptyIcon}>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                  </div>
+                  <div className={styles.sidebarEmptyTitle}>
+                    {!transcript ? 'Transcript needed first' : 'No report yet'}
+                  </div>
+                  <div className={styles.sidebarEmptyText}>
+                    {!transcript
+                      ? 'Switch to the Transcript tab and fetch it first.'
+                      : 'Generate an AI-powered summary of the meeting.'}
+                  </div>
+                  <button
+                    className={`${styles.btn} ${styles.btnSecondary}`}
+                    onClick={fetchReport}
+                    disabled={!transcript || loadingReport}
+                  >
+                    Generate Report
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Onboarding Doc renderer ──────────────────────────────────────────────────
+function OnboardingDocView({ doc }: { doc: OnboardingDocument }) {
+  const val = (v: string | undefined) =>
+    v ? (
+      <span className={styles.docFieldValue}>{v}</span>
+    ) : (
+      <span className={styles.docFieldEmpty}>—</span>
+    );
+
+  const pills = (arr: string[] | undefined) =>
+    arr?.length ? (
+      <div className={styles.docPillList}>
+        {arr.map((a, i) => (
+          <span key={i} className={styles.docPill}>
+            {a}
+          </span>
+        ))}
+      </div>
+    ) : (
+      <span className={styles.docFieldEmpty}>—</span>
+    );
+
+  return (
+    <>
+      {/* Brand */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Brand</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          {(
+            [
+              ['Brand Name', doc.brand?.name],
+              ['Industry', doc.brand?.industry],
+              ['Contact', doc.brand?.contact_name],
+              ['Email', doc.brand?.email],
+              ['Phone', doc.brand?.phone],
+              ['Website', doc.brand?.website],
+              ['Instagram', doc.brand?.instagram],
+              ['TikTok', doc.brand?.tiktok],
+              ['Facebook', doc.brand?.facebook],
+            ] as [string, string][]
+          ).map(([label, value]) => (
+            <div key={label} className={styles.docField}>
+              <span className={styles.docFieldLabel}>{label}</span>
+              {val(value)}
+            </div>
+          ))}
+          {doc.brand?.summary && (
+            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+              <span className={styles.docFieldLabel}>Summary</span>
+              {val(doc.brand.summary)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Campaign */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Campaign</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Platforms</span>
+            {pills(doc.campaign?.platforms)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Geographic Focus</span>
+            {val(doc.campaign?.geographic_focus)}
+          </div>
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>Marketing Message</span>
+            {val(doc.campaign?.marketing_message)}
+          </div>
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>Deliverables</span>
+            {val(doc.campaign?.deliverables)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Objectives</span>
+            {pills(doc.campaign?.objectives)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Creative Angles</span>
+            {pills(doc.campaign?.creative_angles)}
+          </div>
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>Content Timeline</span>
+            {val(doc.campaign?.content_timeline)}
+          </div>
+        </div>
+      </div>
+
+      {/* KOLs */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>KOLs</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Total Count</span>
+            {val(doc.kols?.total_count?.toString())}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Preferred Age Range</span>
+            {val(doc.kols?.preferred_age_range)}
+          </div>
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>Ideal Profile</span>
+            {val(doc.kols?.ideal_profile)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>No-Gos</span>
+            {pills(doc.kols?.no_gos)}
+          </div>
+          {(doc.kols?.tier_breakdown?.length ?? 0) > 0 && (
+            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+              <span className={styles.docFieldLabel}>Tier Breakdown</span>
+              <table className={styles.docTable}>
+                <thead>
+                  <tr>
+                    <th>Tier</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {doc.kols.tier_breakdown.map((t, i) => (
+                    <tr key={i}>
+                      <td>{t.tier}</td>
+                      <td>{t.count ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Content</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Type Preferences</span>
+            {pills(doc.content?.type_preferences)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Tone & Style</span>
+            {val(doc.content?.tone_and_style)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Mandatory Inclusions</span>
+            {pills(doc.content?.mandatory_inclusions)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Content Don&apos;ts</span>
+            {pills(doc.content?.content_donts)}
+          </div>
+        </div>
+      </div>
+
+      {/* Product */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Product</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Main Products</span>
+            {pills(doc.product?.main_products)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>USPs</span>
+            {pills(doc.product?.usps)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Delivery By</span>
+            {val(doc.product?.delivery_by)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Loan / Given</span>
+            {val(doc.product?.loan_or_given)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Lead Time (days)</span>
+            {val(doc.product?.lead_time_days)}
+          </div>
+        </div>
+      </div>
+
+      {/* Offer & CTA */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Offer & CTA</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Offer</span>
+            {val(doc.offer_and_cta?.offer)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>CTA</span>
+            {val(doc.offer_and_cta?.cta)}
+          </div>
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>CTA Links</span>
+            {pills(doc.offer_and_cta?.cta_links)}
+          </div>
+        </div>
+      </div>
+
+      {/* Budget & Timeline */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Budget & Timeline</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Budget</span>
+            {val(doc.budget)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Posting Schedule</span>
+            {val(doc.timeline?.posting_schedule)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Start Date</span>
+            {val(doc.timeline?.start_date)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>End Date</span>
+            {val(doc.timeline?.end_date)}
+          </div>
+          {(doc.timeline?.key_dates?.length ?? 0) > 0 && (
+            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+              <span className={styles.docFieldLabel}>Key Dates</span>
+              <table className={styles.docTable}>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Milestone</th>
+                    <th>Owner</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {doc.timeline.key_dates.map((d, i) => (
+                    <tr key={i}>
+                      <td>{d.date}</td>
+                      <td>{d.milestone}</td>
+                      <td>{d.owner}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Next Steps */}
+      {(doc.next_steps?.length ?? 0) > 0 && (
+        <div className={styles.docSection}>
+          <div className={styles.docSectionHeader}>
+            <span className={styles.docSectionTitle}>Next Steps</span>
+          </div>
+          <div className={styles.docSectionBodyFull}>
+            <table className={styles.docTable}>
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Owner</th>
+                  <th>Deadline</th>
+                </tr>
+              </thead>
+              <tbody>
+                {doc.next_steps.map((s, i) => (
+                  <tr key={i}>
+                    <td>{s.action}</td>
+                    <td>{s.owner}</td>
+                    <td>{s.deadline}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Items */}
+      {(doc.pending_items?.length ?? 0) > 0 && (
+        <div className={styles.docSection}>
+          <div className={styles.docSectionHeader}>
+            <span className={styles.docSectionTitle}>Pending Items</span>
+          </div>
+          <div className={styles.docSectionBodyFull}>
+            <table className={styles.docTable}>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>From</th>
+                  <th>Deadline</th>
+                </tr>
+              </thead>
+              <tbody>
+                {doc.pending_items.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.item}</td>
+                    <td>{p.from}</td>
+                    <td>{p.deadline}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── KOL Brief renderer ───────────────────────────────────────────────────────
+function KolBriefDocView({ doc }: { doc: KolBriefDocument }) {
+  const val = (v: string | undefined) =>
+    v ? (
+      <span className={styles.docFieldValue}>{v}</span>
+    ) : (
+      <span className={styles.docFieldEmpty}>—</span>
+    );
+
+  const pills = (arr: string[] | undefined) =>
+    arr?.length ? (
+      <div className={styles.docPillList}>
+        {arr.map((a, i) => (
+          <span key={i} className={styles.docPill}>
+            {a}
+          </span>
+        ))}
+      </div>
+    ) : (
+      <span className={styles.docFieldEmpty}>—</span>
+    );
+
+  return (
+    <>
+      {/* Campaign Overview */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Campaign Overview</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          {(
+            [
+              ['Brand', doc.campaign_overview?.brand_name],
+              ['Campaign Name', doc.campaign_overview?.campaign_name],
+              ['Platforms & Format', doc.campaign_overview?.platforms_and_format],
+              ['Deliverables', doc.campaign_overview?.deliverables],
+              ['Deadlines', doc.campaign_overview?.deadlines],
+            ] as [string, string][]
+          ).map(([label, value]) => (
+            <div key={label} className={styles.docField}>
+              <span className={styles.docFieldLabel}>{label}</span>
+              {val(value)}
+            </div>
+          ))}
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>Objective</span>
+            {val(doc.campaign_overview?.objective)}
+          </div>
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>Marketing Message</span>
+            {val(doc.campaign_overview?.marketing_message)}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Angle */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Content Angle</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Story Themes</span>
+            {pills(doc.content_angle?.story_theme)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>USPs</span>
+            {pills(doc.content_angle?.usps)}
+          </div>
+          {doc.content_angle?.usp_note && (
+            <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+              <span className={styles.docFieldLabel}>USP Note</span>
+              {val(doc.content_angle.usp_note)}
+            </div>
+          )}
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>Suggested Hooks</span>
+            {pills(doc.content_angle?.suggested_hooks)}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>CTA</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Primary CTA</span>
+            {val(doc.cta?.primary_cta)}
+          </div>
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Placement</span>
+            {val(doc.cta?.placement)}
+          </div>
+          <div className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+            <span className={styles.docFieldLabel}>CTA Variations</span>
+            {pills(doc.cta?.suggested_ctas)}
+          </div>
+        </div>
+      </div>
+
+      {/* Content Board */}
+      {(doc.content_board?.length ?? 0) > 0 && (
+        <div className={styles.docSection}>
+          <div className={styles.docSectionHeader}>
+            <span className={styles.docSectionTitle}>Content Board</span>
+          </div>
+          <div className={styles.docContentBoard}>
+            {doc.content_board.map((c, i) => (
+              <div key={i} className={styles.contentBoardCard}>
+                <div className={styles.contentBoardCardHeader}>{c.title}</div>
+                <div className={styles.contentBoardCardBody}>
+                  <div className={styles.docField}>
+                    <span className={styles.docFieldLabel}>Concept</span>
+                    <span className={styles.docFieldValue}>{c.concept}</span>
+                  </div>
+                  <div className={styles.docField}>
+                    <span className={styles.docFieldLabel}>Highlights</span>
+                    {pills(c.highlights)}
+                  </div>
+                  <div className={styles.docField}>
+                    <span className={styles.docFieldLabel}>CTA</span>
+                    <span className={styles.docFieldValue}>{c.cta}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Guidelines */}
+      <div className={styles.docSection}>
+        <div className={styles.docSectionHeader}>
+          <span className={styles.docSectionTitle}>Guidelines</span>
+        </div>
+        <div className={styles.docSectionBody}>
+          {(
+            [
+              ['Content Notes', doc.guidelines?.content_notes],
+              ['Timeliness', doc.guidelines?.timeliness],
+              ['Approval Process', doc.guidelines?.approval_process],
+              ['Content Usage', doc.guidelines?.content_usage],
+              ['Community Guidelines', doc.guidelines?.community_guidelines],
+            ] as [string, string][]
+          ).map(([label, value]) => (
+            <div key={label} className={`${styles.docField}`} style={{ gridColumn: '1 / -1' }}>
+              <span className={styles.docFieldLabel}>{label}</span>
+              {val(value)}
+            </div>
+          ))}
+          <div className={styles.docField}>
+            <span className={styles.docFieldLabel}>Brand Socials</span>
+            <div className={styles.docPillList}>
+              {doc.guidelines?.brand_socials?.instagram && (
+                <span className={styles.docPill}>IG: {doc.guidelines.brand_socials.instagram}</span>
+              )}
+              {doc.guidelines?.brand_socials?.tiktok && (
+                <span className={styles.docPill}>TK: {doc.guidelines.brand_socials.tiktok}</span>
+              )}
+              {doc.guidelines?.brand_socials?.website && (
+                <span className={styles.docPill}>🌐 {doc.guidelines.brand_socials.website}</span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -258,19 +1629,27 @@ function MeetingStage({ leadId }: { leadId: string }) {
 
 // ─── Documents Stage ──────────────────────────────────────────────────────────
 function DocumentsStage({ leadId }: { leadId: string }) {
-  const { data: docs, isLoading } = useCampaignDocuments(leadId);
+  const { data: docs, isLoading: docsLoading } = useCampaignDocuments(leadId);
+  const { data: kolBrief, isLoading: kolLoading } = useKolBrief(leadId);
+  const { data: meeting } = useCampaignMeeting(leadId);
+  const { data: _lead } = useCampaignLeadDetail(leadId);
   const qc = useQueryClient();
 
-  async function handleSubmitToAdmin(docId: string) {
-    await campaignsService.submitDocumentToAdmin(leadId, docId);
-    qc.invalidateQueries({ queryKey: ['campaign-documents', leadId] });
-  }
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'kol_brief'>('onboarding');
+  const [generating, setGenerating] = useState<'onboarding' | 'kol_brief' | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  if (isLoading) return <StageSkeleton />;
+  const onboardingDoc = docs?.find((d) => d.type === 'onboarding');
+  const hasTranscript =
+    meeting?.transcriptUrl ||
+    meeting?.status === 'completed' ||
+    meeting?.status === ('done' as string);
 
-  const docTypeLabels: Record<string, string> = {
-    onboarding: 'Onboarding Document',
-    kol_briefing: 'KOL Briefing',
+  const statusLabel: Record<string, string> = {
+    draft: 'Draft',
+    cm_approved: 'Submitted to Admin',
+    admin_approved: 'Admin Approved',
+    sent_to_client: 'Sent to Client',
   };
   const statusStyle: Record<string, string> = {
     draft: styles.statusDraft,
@@ -278,63 +1657,167 @@ function DocumentsStage({ leadId }: { leadId: string }) {
     admin_approved: styles.statusApproved,
     sent_to_client: styles.statusSent,
   };
-  const statusLabel: Record<string, string> = {
-    draft: 'Draft',
-    cm_approved: 'Submitted to Admin',
-    admin_approved: 'Admin Approved',
-    sent_to_client: 'Sent to Client',
-  };
+
+  async function handleGenerate(type: 'onboarding' | 'kol_brief') {
+    setGenerating(type);
+    try {
+      if (type === 'onboarding') {
+        const doc = await campaignsService.generateOnboarding(leadId, meeting?.id);
+        qc.setQueryData(['campaign-documents', leadId], (prev: typeof docs) => {
+          const existing = (prev ?? []).filter((d) => d.type !== 'onboarding');
+          return [...existing, doc];
+        });
+      } else {
+        const brief = await campaignsService.generateKolBrief(leadId);
+        qc.setQueryData(['kol-brief', leadId], brief);
+      }
+    } finally {
+      setGenerating(null);
+    }
+  }
+
+  async function handleSubmitOnboarding() {
+    if (!onboardingDoc) return;
+    setSubmitting(true);
+    try {
+      await campaignsService.submitDocumentToAdmin(leadId, onboardingDoc.id);
+      qc.invalidateQueries({ queryKey: ['campaign-documents', leadId] });
+      qc.invalidateQueries({ queryKey: [CAMPAIGN_LEADS_KEY, leadId] });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleSubmitKolBrief() {
+    if (!kolBrief) return;
+    setSubmitting(true);
+    try {
+      await campaignsService.submitKolBrief(kolBrief.id);
+      qc.invalidateQueries({ queryKey: ['kol-brief', leadId] });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const activeDoc = activeTab === 'onboarding' ? onboardingDoc : null;
+  const activeKol = activeTab === 'kol_brief' ? kolBrief : null;
+  const activeStatus = activeTab === 'onboarding' ? onboardingDoc?.status : kolBrief?.status;
+  const isLoading = activeTab === 'onboarding' ? docsLoading : kolLoading;
+  const hasDoc = activeTab === 'onboarding' ? !!onboardingDoc?.document : !!kolBrief?.document;
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Header */}
       <div className={styles.stageHeader}>
         <h2 className={styles.stageTitle}>Documents</h2>
-      </div>
-      <div className={styles.stageBody}>
-        {(docs ?? []).map((doc) => (
-          <div key={doc.id} className={styles.docCard}>
-            <div className={styles.docCardHeader}>
-              <span className={styles.docType}>{docTypeLabels[doc.type] ?? doc.type}</span>
-              <div className={styles.docActions}>
-                <span className={`${styles.statusBadge} ${statusStyle[doc.status] ?? ''}`}>
-                  {statusLabel[doc.status] ?? doc.status}
-                </span>
-                {doc.status === 'draft' && (
-                  <button
-                    className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
-                    onClick={() => handleSubmitToAdmin(doc.id)}
-                  >
-                    Submit to Admin
-                  </button>
-                )}
-              </div>
-            </div>
-            <div
-              className={styles.docContent}
-              contentEditable={doc.status === 'draft'}
-              suppressContentEditableWarning
-              onBlur={(e) =>
-                campaignsService.updateDocument(leadId, doc.id, e.currentTarget.textContent ?? '')
-              }
-            >
-              {doc.content}
-            </div>
-          </div>
-        ))}
-        {!docs?.length && (
-          <div
-            style={{
-              color: 'var(--color-text-tertiary)',
-              fontSize: 'var(--text-sm)',
-              textAlign: 'center',
-              padding: 'var(--space-8)',
-            }}
-          >
-            Documents will be generated after the meeting is completed
+        {hasDoc && activeStatus && (
+          <div className={styles.docViewerActions}>
+            <span className={`${styles.statusBadge} ${statusStyle[activeStatus] ?? ''}`}>
+              {statusLabel[activeStatus] ?? activeStatus}
+            </span>
+            {activeStatus === 'draft' && (
+              <button
+                className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
+                disabled={submitting}
+                onClick={activeTab === 'onboarding' ? handleSubmitOnboarding : handleSubmitKolBrief}
+              >
+                {submitting ? 'Submitting…' : 'Send for Approval'}
+              </button>
+            )}
           </div>
         )}
       </div>
-    </>
+
+      {/* Tabs */}
+      <div className={styles.docTabs}>
+        <button
+          className={`${styles.docTab} ${activeTab === 'onboarding' ? styles.docTabActive : ''}`}
+          onClick={() => setActiveTab('onboarding')}
+        >
+          Onboarding Doc
+          {onboardingDoc && (
+            <span style={{ marginLeft: 6, color: 'var(--color-success-600)' }}>✓</span>
+          )}
+        </button>
+        <button
+          className={`${styles.docTab} ${activeTab === 'kol_brief' ? styles.docTabActive : ''}`}
+          onClick={() => setActiveTab('kol_brief')}
+        >
+          KOL Brief
+          {kolBrief && <span style={{ marginLeft: 6, color: 'var(--color-success-600)' }}>✓</span>}
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className={styles.docViewer}>
+        {isLoading ? (
+          <>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={styles.docSection}>
+                <div className={styles.docSectionHeader}>
+                  <div className={styles.shimmer} style={{ height: 12, width: 120 }} />
+                </div>
+                <div className={styles.docShimmerGrid}>
+                  {[140, 100, 160, 120, 180, 90].map((w, j) => (
+                    <div key={j} className={styles.shimmer} style={{ height: 14, width: w }} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </>
+        ) : !hasDoc ? (
+          <div className={styles.docGenerateState}>
+            <div className={styles.docGenerateIcon}>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+            </div>
+            <div>
+              <p className={styles.docGenerateTitle}>
+                {activeTab === 'onboarding' ? 'Generate Onboarding Document' : 'Generate KOL Brief'}
+              </p>
+              <p className={styles.docGenerateDesc}>
+                {activeTab === 'onboarding'
+                  ? hasTranscript
+                    ? 'Transcript is available. Generate the onboarding document from this meeting.'
+                    : 'This document will be generated once the meeting transcript is available.'
+                  : 'Generate the KOL brief for influencers based on the campaign details.'}
+              </p>
+            </div>
+            {(activeTab === 'kol_brief' || hasTranscript) && (
+              <button
+                className={`${styles.btn} ${styles.btnPrimary}`}
+                disabled={generating === activeTab}
+                onClick={() => handleGenerate(activeTab)}
+              >
+                {generating === activeTab
+                  ? 'Generating…'
+                  : `Generate ${activeTab === 'onboarding' ? 'Onboarding Doc' : 'KOL Brief'}`}
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {activeTab === 'onboarding' && activeDoc?.document && (
+              <OnboardingDocView doc={activeDoc.document} />
+            )}
+            {activeTab === 'kol_brief' && activeKol?.document && (
+              <KolBriefDocView doc={activeKol.document} />
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -696,6 +2179,8 @@ export function StagePanel({ leadId, activeStage }: Props) {
 
   const renderContent = () => {
     switch (group) {
+      case 'lead':
+        return <LeadStage leadId={leadId} />;
       case 'questionnaire':
         return <QuestionnaireStage leadId={leadId} />;
       case 'meeting':

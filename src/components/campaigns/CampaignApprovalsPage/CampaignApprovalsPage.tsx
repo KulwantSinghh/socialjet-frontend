@@ -86,13 +86,13 @@ export function CampaignApprovalsPage() {
   const { data: approvals, isLoading } = useCampaignApprovals();
   const qc = useQueryClient();
 
-  async function handleApprove(id: string) {
-    await campaignsService.approveItem(id);
+  async function handleApprove(id: string, type: string) {
+    await campaignsService.approveItem(id, type);
     qc.invalidateQueries({ queryKey: ['campaign-approvals'] });
   }
 
-  async function handleReject(id: string) {
-    await campaignsService.rejectItem(id);
+  async function handleReject(id: string, type: string) {
+    await campaignsService.rejectItem(id, undefined, type);
     qc.invalidateQueries({ queryKey: ['campaign-approvals'] });
   }
 
@@ -139,13 +139,13 @@ export function CampaignApprovalsPage() {
                 <div className={styles.cardActions}>
                   <button
                     className={`${styles.btn} ${styles.btnApprove}`}
-                    onClick={() => handleApprove(item.id)}
+                    onClick={() => handleApprove(item.id, item.type)}
                   >
                     Approve
                   </button>
                   <button
                     className={`${styles.btn} ${styles.btnReject}`}
-                    onClick={() => handleReject(item.id)}
+                    onClick={() => handleReject(item.id, item.type)}
                   >
                     Reject
                   </button>

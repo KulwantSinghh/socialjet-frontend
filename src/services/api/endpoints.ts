@@ -57,63 +57,65 @@ export const ENDPOINTS = {
   },
 
   CAMPAIGN_LEADS: {
-    LIST: '/campaign-leads',
-    DETAIL: (id: string) => `/campaign-leads/${id}`,
-    ASSIGN: (id: string) => `/campaign-leads/${id}/assign`,
-    STAGE: (id: string) => `/campaign-leads/${id}/stage`,
-    TIMELINE: (id: string) => `/campaign-leads/${id}/timeline`,
-    DASHBOARD_STATS: '/campaign-leads/dashboard/stats',
+    LIST: '/leads/',
+    DETAIL: (id: string) => `/leads/${id}`,
+    ASSIGN: (id: string) => `/leads/${id}/assign-cm`,
+    STAGE: (id: string) => `/leads/${id}/stage`,
+    TIMELINE: (id: string) => `/leads/${id}/timeline`,
+    DASHBOARD_STATS: '/campaigns/dashboard',
   },
 
   CAMPAIGN_QUESTIONNAIRE: {
-    DETAIL: (leadId: string) => `/campaign-leads/${leadId}/questionnaire`,
-    SEND: (leadId: string) => `/campaign-leads/${leadId}/questionnaire/send`,
-    UPDATE: (leadId: string) => `/campaign-leads/${leadId}/questionnaire`,
+    DETAIL: (leadId: string) => `/questionnaire/${leadId}`,
+    SEND: (leadId: string) => `/questionnaire/${leadId}/send`,
+    UPDATE: (leadId: string) => `/questionnaire/${leadId}`,
+    MARK_RECEIVED: (leadId: string) => `/questionnaire/${leadId}/mark-received`,
   },
 
   CAMPAIGN_MEETINGS: {
-    DETAIL: (leadId: string) => `/campaign-leads/${leadId}/meeting`,
-    SCHEDULE: (leadId: string) => `/campaign-leads/${leadId}/meeting/schedule`,
-    CANCEL: (leadId: string) => `/campaign-leads/${leadId}/meeting/cancel`,
-    TRANSCRIPT: (leadId: string) => `/campaign-leads/${leadId}/meeting/transcript`,
+    DETAIL: (leadId: string) => `/meetings/onboarding/${leadId}`,
+    SCHEDULE: (_leadId: string) => `/meetings/onboarding`,
+    CANCEL: (leadId: string) => `/meetings/${leadId}/cancel`,
+    TRANSCRIPT: (leadId: string) => `/meetings/${leadId}/transcript`,
   },
 
   CAMPAIGN_DOCUMENTS: {
-    LIST: (leadId: string) => `/campaign-leads/${leadId}/documents`,
-    DETAIL: (leadId: string, docId: string) => `/campaign-leads/${leadId}/documents/${docId}`,
-    UPDATE: (leadId: string, docId: string) => `/campaign-leads/${leadId}/documents/${docId}`,
-    SUBMIT_TO_ADMIN: (leadId: string, docId: string) =>
-      `/campaign-leads/${leadId}/documents/${docId}/submit`,
-    SEND_TO_CLIENT: (leadId: string, docId: string) =>
-      `/campaign-leads/${leadId}/documents/${docId}/send`,
+    LIST: (leadId: string) => `/onboarding/${leadId}`,
+    DETAIL: (_leadId: string, docId: string) => `/onboarding/${docId}`,
+    UPDATE: (_leadId: string, docId: string) => `/onboarding/${docId}`,
+    SUBMIT_TO_ADMIN: (_leadId: string, docId: string) => `/onboarding/${docId}/submit`,
+    SEND_TO_CLIENT: (_leadId: string, docId: string) => `/onboarding/${docId}/send-to-client`,
+    GENERATE_ONBOARDING: '/onboarding/generate',
+    KOL_BRIEF_GENERATE: '/kol-brief/generate',
+    KOL_BRIEF_DETAIL: (leadId: string) => `/kol-brief/${leadId}`,
+    KOL_BRIEF_UPDATE: (briefId: string) => `/kol-brief/${briefId}`,
+    KOL_BRIEF_SUBMIT: (briefId: string) => `/kol-brief/${briefId}/submit`,
   },
 
   CAMPAIGN_INFLUENCERS: {
-    LIST: '/influencers',
-    DETAIL: (id: string) => `/influencers/${id}`,
-    LEAD_LIST: (leadId: string) => `/campaign-leads/${leadId}/influencers`,
-    ADD_TO_LEAD: (leadId: string) => `/campaign-leads/${leadId}/influencers`,
-    UPDATE_STATUS: (leadId: string, influencerId: string) =>
-      `/campaign-leads/${leadId}/influencers/${influencerId}/status`,
-    UPDATE_DEAL: (leadId: string, influencerId: string) =>
-      `/campaign-leads/${leadId}/influencers/${influencerId}/deal`,
-    SEND_TO_CLIENT: (leadId: string) => `/campaign-leads/${leadId}/influencers/send`,
+    LIST: '/creators/',
+    DETAIL: (id: string) => `/creators/${id}`,
+    LEAD_LIST: (leadId: string) => `/campaign-creators/${leadId}`,
+    ADD_TO_LEAD: (leadId: string) => `/campaign-creators/${leadId}`,
+    UPDATE_STATUS: (leadId: string, creatorId: string) =>
+      `/campaign-creators/${leadId}/${creatorId}/status`,
+    UPDATE_DEAL: (leadId: string, creatorId: string) =>
+      `/campaign-creators/${leadId}/${creatorId}/deal`,
+    SEND_TO_CLIENT: (leadId: string) => `/campaign-creators/${leadId}/send-to-client`,
   },
 
   CAMPAIGN_CONTENT: {
-    LIST: (leadId: string) => `/campaign-leads/${leadId}/content`,
-    SUBMIT: (leadId: string) => `/campaign-leads/${leadId}/content`,
-    UPDATE_STATUS: (leadId: string, contentId: string) =>
-      `/campaign-leads/${leadId}/content/${contentId}/status`,
-    SCHEDULE: (leadId: string, contentId: string) =>
-      `/campaign-leads/${leadId}/content/${contentId}/schedule`,
+    LIST: (leadId: string) => `/content/${leadId}`,
+    SUBMIT: (leadId: string) => `/content/${leadId}`,
+    UPDATE_STATUS: (leadId: string, contentId: string) => `/content/${leadId}/${contentId}/status`,
+    SCHEDULE: (leadId: string, contentId: string) => `/content/${leadId}/${contentId}/schedule`,
   },
 
   CAMPAIGN_INBOX: {
-    CONVERSATIONS: '/campaign-inbox/conversations',
-    CONVERSATION: (id: string) => `/campaign-inbox/conversations/${id}`,
-    SEND: (id: string) => `/campaign-inbox/conversations/${id}/send`,
-    LEAD_CLIENT: (leadId: string) => `/campaign-inbox/lead/${leadId}/client`,
+    CONVERSATIONS: '/inbox/',
+    CONVERSATION: (id: string) => `/inbox/${id}`,
+    SEND: (id: string) => `/inbox/${id}/send`,
+    LEAD_CLIENT: (leadId: string) => `/inbox/${leadId}`,
   },
 
   CAMPAIGN_APPROVALS: {
