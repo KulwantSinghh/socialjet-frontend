@@ -28,7 +28,7 @@ const COLUMNS = [
   {
     key: 'meeting',
     label: 'Meeting',
-    statuses: ['qualified', 'meeting_booked'],
+    statuses: ['qualified', 'meeting_booked', 'rescheduled'],
     dropStatus: 'meeting_booked',
     color: '#f59e0b',
     bg: 'rgba(245,158,11,0.08)',

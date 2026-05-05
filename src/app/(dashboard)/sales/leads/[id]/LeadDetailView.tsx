@@ -317,7 +317,11 @@ function MeetingCard({
   const meetingNum = meeting.meeting_number ?? 1;
   const numLabel = MEETING_NUMBER_LABELS[meetingNum] ?? `${meetingNum}th`;
   const typeLabel = meeting.meeting_type ? MEETING_TYPE_LABELS[meeting.meeting_type] : null;
-  const isPast = meeting.meeting_status === 'done' || !!meeting.has_transcript;
+  const isCompleted = meeting.meeting_status === 'done' || !!meeting.has_transcript;
+  const isPast =
+    isCompleted ||
+    meeting.meeting_status === 'rescheduled' ||
+    meeting.meeting_status === 'canceled';
 
   const sentimentColor = {
     positive: '#22c55e',
@@ -335,12 +339,13 @@ function MeetingCard({
         <span
           className={cn(
             styles.meetingStatusBadge,
-            isPast && styles.meetingStatusDone,
+            isCompleted && styles.meetingStatusDone,
             !isPast && meeting.meeting_status === 'upcoming' && styles.meetingStatusUpcoming,
-            meeting.meeting_status === 'canceled' && styles.meetingStatusCanceled
+            meeting.meeting_status === 'canceled' && styles.meetingStatusCanceled,
+            meeting.meeting_status === 'rescheduled' && styles.meetingStatusRescheduled
           )}
         >
-          {isPast
+          {isCompleted
             ? 'Done'
             : meeting.meeting_status.charAt(0).toUpperCase() + meeting.meeting_status.slice(1)}
         </span>
@@ -415,7 +420,7 @@ function MeetingCard({
             <FileIcon /> View Transcript & Report
           </button>
         )}
-        {isPast && !meeting.has_transcript && (
+        {isCompleted && !meeting.has_transcript && (
           <span className={styles.meetingNoTranscript}>
             {meeting.transcript_status === 'pending' ? 'Transcript processing...' : 'No transcript'}
           </span>
@@ -1473,9 +1478,13 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
                 </div>
               ) : (
                 <div className={styles.proposalList}>
-                  {meetingsData.meetings.map((meeting) => (
-                    <MeetingAnalysisCard key={meeting.meeting_id} meeting={meeting} />
-                  ))}
+                  {meetingsData.meetings
+                    .filter(
+                      (m) => m.meeting_status !== 'rescheduled' && m.meeting_status !== 'canceled'
+                    )
+                    .map((meeting) => (
+                      <MeetingAnalysisCard key={meeting.meeting_id} meeting={meeting} />
+                    ))}
                 </div>
               )}
             </div>
