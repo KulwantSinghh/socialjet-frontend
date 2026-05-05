@@ -318,10 +318,7 @@ function MeetingCard({
   const numLabel = MEETING_NUMBER_LABELS[meetingNum] ?? `${meetingNum}th`;
   const typeLabel = meeting.meeting_type ? MEETING_TYPE_LABELS[meeting.meeting_type] : null;
   const isCompleted = meeting.meeting_status === 'done' || !!meeting.has_transcript;
-  const isPast =
-    isCompleted ||
-    meeting.meeting_status === 'rescheduled' ||
-    meeting.meeting_status === 'canceled';
+  const isPast = isCompleted || meeting.meeting_status === 'canceled';
 
   const sentimentColor = {
     positive: '#22c55e',
@@ -341,8 +338,7 @@ function MeetingCard({
             styles.meetingStatusBadge,
             isCompleted && styles.meetingStatusDone,
             !isPast && meeting.meeting_status === 'upcoming' && styles.meetingStatusUpcoming,
-            meeting.meeting_status === 'canceled' && styles.meetingStatusCanceled,
-            meeting.meeting_status === 'rescheduled' && styles.meetingStatusRescheduled
+            meeting.meeting_status === 'canceled' && styles.meetingStatusCanceled
           )}
         >
           {isCompleted
@@ -1479,9 +1475,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
               ) : (
                 <div className={styles.proposalList}>
                   {meetingsData.meetings
-                    .filter(
-                      (m) => m.meeting_status !== 'rescheduled' && m.meeting_status !== 'canceled'
-                    )
+                    .filter((m) => m.meeting_status !== 'canceled')
                     .map((meeting) => (
                       <MeetingAnalysisCard key={meeting.meeting_id} meeting={meeting} />
                     ))}
