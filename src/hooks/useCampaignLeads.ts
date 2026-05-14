@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { campaignsService } from '@/services/campaigns.service';
+import { apiClient } from '@/services/api/client';
+import { ENDPOINTS } from '@/services/api/endpoints';
 import type { CampaignLeadStage } from '@/types/campaign.types';
 
 export const CAMPAIGN_LEADS_KEY = 'campaign-leads';
@@ -125,22 +127,23 @@ export function useBudgetPreview(
 
 export function useShortlist(
   campaignId: string,
-  params?: { batch_number?: number; status?: string }
+  params?: { batch_number?: number; status?: string },
+  enabled = true
 ) {
   return useQuery({
     queryKey: ['shortlist', campaignId, params],
     queryFn: () => campaignsService.getShortlist(campaignId, params),
     staleTime: 15_000,
-    enabled: !!campaignId,
+    enabled: !!campaignId && enabled,
   });
 }
 
-export function useShortlistStats(campaignId: string) {
+export function useShortlistStats(campaignId: string, enabled = true) {
   return useQuery({
     queryKey: ['shortlist-stats', campaignId],
     queryFn: () => campaignsService.getShortlistStats(campaignId),
     staleTime: 15_000,
-    enabled: !!campaignId,
+    enabled: !!campaignId && enabled,
   });
 }
 
@@ -270,6 +273,92 @@ export function useRejectItem() {
       campaignsService.rejectItem(id, reason, type),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['campaign-approvals'] });
+    },
+  });
+}
+
+// ── Recommendations hooks ─────────────────────────────────────────────────────
+
+export interface RecommendationCreator {
+  creator_id: string;
+  name: string;
+  tier: string;
+  country: string;
+  languages: string[] | null;
+  niches: string[] | null;
+  instagram_followers: number | null;
+  tiktok_followers: number | null;
+  max_followers: number | null;
+  engagement_rate: number | null;
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
+  recommendation_score: number;
+  score_breakdown: {
+    niche: number;
+    engagement: number;
+    completeness: number;
+    tier?: number;
+    followers?: number;
+    location?: number;
+  };
+  selection_reason: string;
+  status: 'accepted' | 'rejected' | 'pending' | null;
+}
+
+export interface RecommendationsResponse {
+  requirement_id: string;
+  lead_id: string;
+  documents_used: {
+    kol_briefs: number;
+    meetings_total: number;
+    meetings_with_transcripts: number;
+    proposals: number;
+  };
+  extracted_requirements: {
+    campaign_objective: string;
+    platforms: string[];
+    niches: string[];
+    brand_style: string[];
+    min_engagement_rate: number;
+    preferred_tier: string;
+    additional_notes: string;
+  };
+  matched_creators: RecommendationCreator[];
+  total_matched: number;
+}
+
+export function useRecommendations(leadId: string) {
+  return useQuery<RecommendationsResponse>({
+    queryKey: ['recommendations', leadId],
+    queryFn: async () => {
+      const res = await apiClient.get<RecommendationsResponse>(
+        ENDPOINTS.RECOMMENDATIONS.GET(leadId)
+      );
+      return res.data;
+    },
+    staleTime: 30_000,
+    enabled: !!leadId,
+  });
+}
+
+export function useRecommendationDecision(leadId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      recommendationId,
+      creatorId,
+      decision,
+    }: {
+      recommendationId: string;
+      creatorId: string;
+      decision: 'accepted' | 'rejected';
+    }) =>
+      apiClient.patch(ENDPOINTS.RECOMMENDATIONS.DECISION(recommendationId), {
+        creator_id: creatorId,
+        decision,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['recommendations', leadId] });
     },
   });
 }

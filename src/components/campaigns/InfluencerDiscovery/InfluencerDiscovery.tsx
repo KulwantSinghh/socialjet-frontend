@@ -10,7 +10,10 @@ import {
   useLoadNextBatch,
   useTransitionPhase,
   useBudgetPreview,
+  useRecommendations,
+  useRecommendationDecision,
 } from '@/hooks/useCampaignLeads';
+import type { RecommendationCreator } from '@/hooks/useCampaignLeads';
 import type {
   ShortlistEntry,
   DiscoveryFilters,
@@ -307,8 +310,8 @@ function CreatorCard({
 }
 
 // ── Stats sidebar ─────────────────────────────────────────────────────────────
-function StatsSidebar({ campaignId }: { campaignId: string }) {
-  const { data: stats } = useShortlistStats(campaignId);
+function StatsSidebar({ campaignId, enabled }: { campaignId: string; enabled: boolean }) {
+  const { data: stats } = useShortlistStats(campaignId, enabled);
 
   if (!stats?.has_shortlist) return null;
 
@@ -387,7 +390,239 @@ function StatsSidebar({ campaignId }: { campaignId: string }) {
   );
 }
 
-// ── Discovery form ────────────────────────────────────────────────────────────
+// ── Recommendation card ───────────────────────────────────────────────────────
+function RecommendationCard({
+  creator,
+  decision,
+  onDecision,
+  isPending,
+}: {
+  creator: RecommendationCreator;
+  decision?: 'accepted' | 'rejected';
+  onDecision: (creatorId: string, decision: 'accepted' | 'rejected') => void;
+  isPending: boolean;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const color = avatarColor(creator.name);
+
+  return (
+    <div
+      className={`${styles.recCard} ${decision === 'accepted' ? styles.recCardAccepted : decision === 'rejected' ? styles.recCardRejected : ''}`}
+    >
+      <div className={styles.cardTop}>
+        <div className={styles.cardAvatar} style={{ '--c': color } as React.CSSProperties}>
+          {getInitials(creator.name)}
+        </div>
+        <div className={styles.cardIdentity}>
+          <span className={styles.cardName}>{creator.name}</span>
+          <div className={styles.cardHandles}>
+            {creator.instagram_handle && (
+              <a
+                className={styles.handleIG}
+                href={`https://instagram.com/${creator.instagram_handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                @{creator.instagram_handle}
+              </a>
+            )}
+            {creator.tiktok_handle && (
+              <a
+                className={styles.handleTT}
+                href={`https://tiktok.com/@${creator.tiktok_handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                @{creator.tiktok_handle}
+              </a>
+            )}
+          </div>
+        </div>
+        <div className={styles.cardRight}>
+          <div
+            className={styles.scoreRing}
+            style={
+              {
+                '--pct': `${Math.round(creator.recommendation_score)}%`,
+                '--tier': TIER_COLOR[(creator.tier as InfluencerTier) ?? 'nano'] ?? '#888',
+              } as React.CSSProperties
+            }
+          >
+            <span className={styles.scoreValue}>{creator.recommendation_score.toFixed(1)}</span>
+          </div>
+          <span
+            className={styles.tier}
+            style={{
+              color: TIER_COLOR[creator.tier as InfluencerTier] ?? '#888',
+            }}
+          >
+            {creator.tier.replace('_', ' ')}
+          </span>
+        </div>
+      </div>
+
+      <div className={styles.cardMeta}>
+        {creator.country && <span className={styles.metaChip}>📍 {creator.country}</span>}
+        {(creator.languages?.length ?? 0) > 0 && (
+          <span className={styles.metaChip}>🌐 {creator.languages!.join(', ')}</span>
+        )}
+      </div>
+
+      <div className={styles.cardStats}>
+        <div className={styles.statCell}>
+          <span className={styles.statVal}>
+            {formatFollowers(creator.instagram_followers ?? undefined)}
+          </span>
+          <span className={styles.statLbl}>IG Followers</span>
+        </div>
+        <div className={styles.statCell}>
+          <span className={styles.statVal}>
+            {formatFollowers(creator.tiktok_followers ?? undefined)}
+          </span>
+          <span className={styles.statLbl}>TT Followers</span>
+        </div>
+        <div className={styles.statCell}>
+          <span className={styles.statVal}>
+            {creator.engagement_rate != null ? `${creator.engagement_rate.toFixed(1)}%` : '—'}
+          </span>
+          <span className={styles.statLbl}>Eng. Rate</span>
+        </div>
+      </div>
+
+      {(creator.niches?.length ?? 0) > 0 && (
+        <div className={styles.nicheRow}>
+          {creator.niches!.slice(0, 4).map((n, i) => (
+            <span key={i} className={styles.nicheTag}>
+              {n}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <button className={styles.reasoningToggle} onClick={() => setExpanded((p) => !p)}>
+        {expanded ? '▲ Hide AI Reasoning' : '▼ Show AI Reasoning'}
+      </button>
+
+      {expanded && (
+        <div className={styles.reasoning}>
+          <p className={styles.reasoningText}>{creator.selection_reason}</p>
+          <div className={styles.scoreBars}>
+            <ScoreBar label="Niche" value={creator.score_breakdown.niche} />
+            <ScoreBar label="Engagement" value={creator.score_breakdown.engagement} />
+            <ScoreBar label="Completeness" value={creator.score_breakdown.completeness} />
+          </div>
+        </div>
+      )}
+
+      {decision === 'accepted' && <div className={styles.acceptedBadge}>✓ Accepted</div>}
+
+      {!decision && (
+        <div className={styles.cardActions}>
+          <button
+            className={`${styles.btn} ${styles.btnApprove}`}
+            onClick={() => onDecision(creator.creator_id, 'accepted')}
+            disabled={isPending}
+          >
+            ✓ Accept
+          </button>
+          <button
+            className={`${styles.btn} ${styles.btnReject}`}
+            onClick={() => onDecision(creator.creator_id, 'rejected')}
+            disabled={isPending}
+          >
+            ✕ Reject
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Recommendations section ───────────────────────────────────────────────────
+function RecommendationsSection({ leadId }: { leadId: string }) {
+  const { data, isLoading, error, refetch } = useRecommendations(leadId);
+  const { mutate: decide, isPending } = useRecommendationDecision(leadId);
+  const [optimistic, setOptimistic] = React.useState<Record<string, 'accepted' | 'rejected'>>({});
+
+  function handleDecision(creatorId: string, decision: 'accepted' | 'rejected') {
+    if (!data) return;
+    setOptimistic((prev) => ({ ...prev, [creatorId]: decision }));
+    decide(
+      { recommendationId: data.requirement_id, creatorId, decision },
+      { onSuccess: () => refetch() }
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className={styles.loadingState}>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className={`${styles.shimmer} ${styles.skeletonCard}`} />
+        ))}
+      </div>
+    );
+  }
+
+  if (error || !data) return null;
+
+  const { extracted_requirements: req, matched_creators: creators, documents_used } = data;
+
+  return (
+    <div className={styles.recSection}>
+      <div className={styles.recHeader}>
+        <h3 className={styles.recTitle}>AI Recommendations</h3>
+        {documents_used && (
+          <span className={styles.recMeta}>
+            Based on {documents_used.kol_briefs} brief · {documents_used.proposals} proposals ·{' '}
+            {documents_used.meetings_total} meetings
+          </span>
+        )}
+      </div>
+
+      {req && (
+        <div className={styles.recReqRow}>
+          {req.platforms?.map((p) => (
+            <span key={p} className={`${styles.chip} ${styles.chipActive}`}>
+              {p}
+            </span>
+          ))}
+          {req.niches?.map((n) => (
+            <span key={n} className={styles.nicheTag}>
+              {n}
+            </span>
+          ))}
+          {req.min_engagement_rate > 0 && (
+            <span className={styles.metaChip}>Min Eng: {req.min_engagement_rate}%</span>
+          )}
+        </div>
+      )}
+
+      {req?.additional_notes && (
+        <details className={styles.recNotes}>
+          <summary className={styles.reasoningToggle}>▼ Campaign Notes</summary>
+          <p className={styles.reasoningText}>{req.additional_notes}</p>
+        </details>
+      )}
+
+      <div className={styles.creatorGrid}>
+        {creators.map((c) => (
+          <RecommendationCard
+            key={c.creator_id}
+            creator={c}
+            decision={
+              optimistic[c.creator_id] ??
+              (c.status === 'accepted' || c.status === 'rejected' ? c.status : undefined)
+            }
+            onDecision={handleDecision}
+            isPending={isPending}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Discovery form (unused — kept for future use) ─────────────────────────────
 const OBJECTIVES: { value: DiscoveryObjective; label: string }[] = [
   { value: 'brand_awareness', label: 'Brand Awareness' },
   { value: 'engagement', label: 'Engagement' },
@@ -397,6 +632,7 @@ const OBJECTIVES: { value: DiscoveryObjective; label: string }[] = [
 
 const TIERS: InfluencerTier[] = ['nano', 'micro', 'mid_tier', 'macro', 'mega'];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function DiscoveryForm({ campaignId, onSuccess }: { campaignId: string; onSuccess: () => void }) {
   const [budget, setBudget] = useState('');
   const [objective, setObjective] = useState<DiscoveryObjective>('brand_awareness');
@@ -677,13 +913,17 @@ function DiscoveryForm({ campaignId, onSuccess }: { campaignId: string; onSucces
 // ── Main component ────────────────────────────────────────────────────────────
 export function InfluencerDiscovery({ leadId }: { leadId: string }) {
   const [tab, setTab] = useState<'discover' | 'shortlist'>('discover');
-  const [showForm, setShowForm] = useState(true);
 
-  const { data: shortlistData, isLoading: shortlistLoading, refetch } = useShortlist(leadId);
+  const shortlistEnabled = tab === 'shortlist';
+  const { data: shortlistData, isLoading: shortlistLoading } = useShortlist(
+    leadId,
+    undefined,
+    shortlistEnabled
+  );
   const { mutate: updateEntry, isPending: isUpdating } = useUpdateShortlistEntry(leadId);
   const { mutate: loadNext, isPending: loadingNext } = useLoadNextBatch(leadId);
   const { mutate: transition, isPending: transitioning } = useTransitionPhase(leadId);
-  const { data: stats } = useShortlistStats(leadId);
+  const { data: stats } = useShortlistStats(leadId, shortlistEnabled);
 
   const entries = shortlistData?.entries ?? [];
   const hasShortlist = entries.length > 0;
@@ -740,41 +980,7 @@ export function InfluencerDiscovery({ leadId }: { leadId: string }) {
       <div className={styles.layout}>
         <div className={styles.main}>
           {/* ── Discovery tab ── */}
-          {tab === 'discover' && (
-            <>
-              <div className={styles.formToggle}>
-                <button
-                  className={`${styles.btn} ${styles.btnGhost}`}
-                  onClick={() => setShowForm((p) => !p)}
-                >
-                  {showForm ? '▲ Hide Filters' : '▼ Show Filters'}
-                </button>
-              </div>
-              {showForm && (
-                <DiscoveryForm
-                  campaignId={leadId}
-                  onSuccess={() => {
-                    setShowForm(false);
-                    setTab('shortlist');
-                    refetch();
-                  }}
-                />
-              )}
-
-              {/* If there's a shortlist, show a teaser */}
-              {hasShortlist && !showForm && (
-                <div className={styles.teaserBar}>
-                  <span>{entries.length} creators shortlisted</span>
-                  <button
-                    className={`${styles.btn} ${styles.btnGhost}`}
-                    onClick={() => setTab('shortlist')}
-                  >
-                    View Shortlist →
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+          {tab === 'discover' && <RecommendationsSection leadId={leadId} />}
 
           {/* ── Shortlist tab ── */}
           {tab === 'shortlist' && (
@@ -837,7 +1043,7 @@ export function InfluencerDiscovery({ leadId }: { leadId: string }) {
           )}
         </div>
 
-        <StatsSidebar campaignId={leadId} />
+        <StatsSidebar campaignId={leadId} enabled={shortlistEnabled} />
       </div>
     </div>
   );

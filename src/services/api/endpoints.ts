@@ -256,4 +256,9 @@ export const ENDPOINTS = {
   WHATSAPP: {
     SEND: (leadId: string) => `/leads/${leadId}/whatsapp`,
   },
+
+  RECOMMENDATIONS: {
+    GET: (leadId: string) => `/recommendations/${leadId}`,
+    DECISION: (recommendationId: string) => `/recommendations/${recommendationId}/decision`,
+  },
 } as const;

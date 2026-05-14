@@ -980,3 +980,86 @@
   height: 160px;
   border-radius: 14px;
 }
+
+/* ── Recommendations section ────────────────────────── */
+.recSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.recHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.recTitle {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.recMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.recReqRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.recNotes {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ── Recommendation card (reuses creatorCard styles) ── */
+.recCard {
+  background: var(--color-surface-default, #fff);
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  padding: 18px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  transition: box-shadow 0.15s ease;
+}
+
+.recCard:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.recCardAccepted {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 1px #22c55e33;
+}
+
+.recCardRejected {
+  background: #fef2f2;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px #ef444433;
+  opacity: 0.7;
+}
+
+.acceptedBadge {
+  text-align: center;
+  padding: 10px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: #16a34a;
+  background: #dcfce7;
+  border-radius: var(--radius-md);
+  border: 1px solid #86efac;
+}
