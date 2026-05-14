@@ -27,7 +27,7 @@ const EMPTY_FORM: CreateLeadRequest = {
 export interface NewLeadModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (lead: { lead_id: string; name: string }) => void;
 }
 
 export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) => {
@@ -114,9 +114,9 @@ export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) =>
     };
 
     createLead.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         setSuccessMsg(`✓ Lead "${form.name}" created successfully.`);
-        onSuccess?.();
+        onSuccess?.(data);
         setTimeout(() => onClose(), 1500);
       },
       onError: (err: unknown) => {

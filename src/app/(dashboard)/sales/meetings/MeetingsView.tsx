@@ -10,6 +10,7 @@ import { useInstantMeeting } from '@/hooks/useMeetingRequests';
 import { apiClient } from '@/services/api/client';
 import { ENDPOINTS } from '@/services/api/endpoints';
 import { cn } from '@/lib/utils';
+import { NewLeadModal } from '@/components/shared/NewLeadModal/NewLeadModal';
 import type { Meeting, AvailabilityCheckResponse } from '@/types/meeting.types';
 import { MEETING_TYPE_LABELS } from '@/types/meeting.types';
 
@@ -785,10 +786,19 @@ function MeetingCard({
 }
 
 // ─── Instant Meeting Modal (with conflict check) ──────────────────────────────
-function InstantMeetingModal({ onClose }: { onClose: () => void }) {
-  const { data: leadsData } = useLeads();
+function InstantMeetingModal({
+  onClose,
+  preselectedLeadId,
+}: {
+  onClose: () => void;
+  preselectedLeadId?: string;
+}) {
+  const { data: leadsData, isLoading: leadsLoading } = useLeads(
+    undefined,
+    preselectedLeadId ? { staleTime: 0 } : undefined
+  );
   const createMeeting = useInstantMeeting();
-  const [leadId, setLeadId] = useState('');
+  const [leadId, setLeadId] = useState(preselectedLeadId ?? '');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [duration, setDuration] = useState(30);
@@ -872,9 +882,10 @@ function InstantMeetingModal({ onClose }: { onClose: () => void }) {
                 className={styles.select}
                 value={leadId}
                 onChange={(e) => setLeadId(e.target.value)}
+                disabled={leadsLoading}
                 required
               >
-                <option value="">Select a lead...</option>
+                <option value="">{leadsLoading ? 'Loading leads...' : 'Select a lead...'}</option>
                 {leads.map((lead) => (
                   <option key={lead.lead_id} value={lead.lead_id}>
                     {lead.name}
@@ -1001,6 +1012,9 @@ function InstantMeetingModal({ onClose }: { onClose: () => void }) {
 export function MeetingsView() {
   const [tab, setTab] = useState<'upcoming' | 'past' | 'all'>('upcoming');
   const [showBookModal, setShowBookModal] = useState(false);
+  const [showNewLeadModal, setShowNewLeadModal] = useState(false);
+  const [preselectedLeadId, setPreselectedLeadId] = useState<string | undefined>(undefined);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [transcriptMeeting, setTranscriptMeeting] = useState<Meeting | null>(null);
   const [rescheduleMeeting, setRescheduleMeeting] = useState<Meeting | null>(null);
   const [cancelMeeting, setCancelMeeting] = useState<Meeting | null>(null);
@@ -1032,9 +1046,82 @@ export function MeetingsView() {
           <h1 className={styles.pageTitle}>Meetings</h1>
           <p className={styles.pageSubtitle}>All meetings — leads, non-leads, Calendly and Zoom</p>
         </div>
-        <button className={styles.instantBtn} onClick={() => setShowBookModal(true)}>
-          <PlusIcon /> Book Meeting
-        </button>
+        <div className={styles.bookDropdownWrapper}>
+          <button
+            className={styles.instantBtn}
+            onClick={() => setDropdownOpen((v) => !v)}
+            aria-haspopup="true"
+            aria-expanded={dropdownOpen}
+          >
+            <PlusIcon /> Book Meeting
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              style={{ marginLeft: 2 }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          {dropdownOpen && (
+            <>
+              <div className={styles.bookDropdownBackdrop} onClick={() => setDropdownOpen(false)} />
+              <div className={styles.bookDropdown}>
+                <button
+                  className={styles.bookDropdownItem}
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    setPreselectedLeadId(undefined);
+                    setShowBookModal(true);
+                  }}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  Book for Existing Lead
+                </button>
+                <button
+                  className={styles.bookDropdownItem}
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    setShowNewLeadModal(true);
+                  }}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <line x1="19" y1="8" x2="19" y2="14" />
+                    <line x1="22" y1="11" x2="16" y2="11" />
+                  </svg>
+                  Add New Lead &amp; Book Meeting
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className={styles.tabs}>
@@ -1075,7 +1162,23 @@ export function MeetingsView() {
         )}
       </div>
 
-      {showBookModal && <InstantMeetingModal onClose={() => setShowBookModal(false)} />}
+      {showBookModal && (
+        <InstantMeetingModal
+          onClose={() => {
+            setShowBookModal(false);
+            setPreselectedLeadId(undefined);
+          }}
+          preselectedLeadId={preselectedLeadId}
+        />
+      )}
+      <NewLeadModal
+        open={showNewLeadModal}
+        onClose={() => setShowNewLeadModal(false)}
+        onSuccess={(lead) => {
+          setPreselectedLeadId(lead.lead_id);
+          setShowBookModal(true);
+        }}
+      />
       {transcriptMeeting && (
         <TranscriptDrawer meeting={transcriptMeeting} onClose={() => setTranscriptMeeting(null)} />
       )}

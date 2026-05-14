@@ -20,7 +20,7 @@ export const leadsService = {
     return data;
   },
 
-  create: async (payload: CreateLeadRequest): Promise<unknown> => {
+  create: async (payload: CreateLeadRequest): Promise<{ lead_id: string; name: string }> => {
     const { data } = await apiClient.post(ENDPOINTS.LEADS.CREATE, payload);
     return data;
   },

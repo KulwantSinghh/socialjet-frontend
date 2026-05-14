@@ -14,11 +14,11 @@ export const leadKeys = {
  * @example
  * const { data, isLoading } = useLeads({ search: 'john', status: 'new' });
  */
-export function useLeads(params?: LeadsListParams) {
+export function useLeads(params?: LeadsListParams, options?: { staleTime?: number }) {
   return useQuery({
     queryKey: leadKeys.list(params ?? {}),
     queryFn: () => leadsService.getLeads(params),
-    staleTime: 30_000,
+    staleTime: options?.staleTime ?? 30_000,
     refetchOnWindowFocus: false,
   });
 }

@@ -17,7 +17,7 @@ export function useCreateLead() {
 
   return useMutation({
     mutationFn: leadsService.create,
-    onSuccess: () => {
+    onSuccess: (_data) => {
       // Refresh the leads table, counts, and alert banner after a new lead is created
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
       queryClient.invalidateQueries({ queryKey: leadStatsKeys.all });
