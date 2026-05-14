@@ -18,9 +18,27 @@ import type {
   InfluencerStatus,
   DealStatus,
   ContentStatus,
+  BudgetPreview,
+  DiscoveryFilters,
+  DiscoveryResult,
+  ShortlistResponse,
+  ShortlistEntryStatus,
+  ShortlistStats,
+  DiscoveryObjective,
+  CreatorProfile,
 } from '@/types/campaign.types';
 
 // ── Field-mapping helpers ─────────────────────────────────────────────────────
+
+const STAGE_NORMALIZE: Record<string, CampaignLeadStage> = {
+  cm_approved: 'documents_cm_approved',
+  admin_approved: 'documents_admin_approved',
+  sent_to_client: 'documents_sent_to_client',
+};
+
+function normalizeStage(stage: string): CampaignLeadStage {
+  return (STAGE_NORMALIZE[stage] ?? stage) as CampaignLeadStage;
+}
 
 function mapLead(raw: Record<string, unknown>): CampaignLead {
   return {
@@ -28,7 +46,7 @@ function mapLead(raw: Record<string, unknown>): CampaignLead {
     clientName: (raw.name ?? raw.contact_person ?? '') as string,
     clientEmail: (raw.email ?? '') as string,
     clientCompany: (raw.company ?? '') as string,
-    stage: (raw.stage ?? 'unassigned') as CampaignLeadStage,
+    stage: normalizeStage((raw.stage ?? 'unassigned') as string),
     priority: (raw.priority ?? 'medium') as CampaignLead['priority'],
     source: (raw.source ?? '') as string,
     createdAt: (raw.created_at ?? '') as string,
@@ -68,6 +86,7 @@ function mapDocument(raw: Record<string, unknown>): CampaignDocument {
     content: isObject ? '' : ((docField ?? raw.content ?? '') as string),
     document: isObject ? (docField as CampaignDocument['document']) : undefined,
     status: (raw.status ?? 'draft') as CampaignDocument['status'],
+    rejectionReason: raw.rejection_reason as string | undefined,
     createdAt: (raw.created_at ?? '') as string,
     updatedAt: (raw.updated_at ?? '') as string,
   };
@@ -77,16 +96,36 @@ function mapInfluencer(raw: Record<string, unknown>): Influencer {
   return {
     id: (raw.creator_id ?? raw.id) as string,
     name: raw.name as string,
-    handle: raw.handle as string,
+    handle: (raw.handle ?? raw.instagram_handle ?? raw.tiktok_handle ?? '') as string,
     platform: raw.platform as Influencer['platform'],
     avatar: raw.avatar as string | undefined,
     followers: raw.followers as number,
     engagementRate: (raw.engagement_rate ?? raw.engagementRate ?? 0) as number,
     avgViews: raw.avg_views as number | undefined,
-    niche: (raw.niche ?? []) as string[],
+    niche:
+      typeof raw.niche === 'string' && raw.niche
+        ? (raw.niche as string)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : Array.isArray(raw.niche)
+          ? (raw.niche as string[])
+          : [],
     location: raw.location as string | undefined,
     priceRange: raw.price_range as Influencer['priceRange'],
     isRecommended: raw.is_recommended as boolean | undefined,
+    rate: raw.rate as string | undefined,
+    email: raw.email as string | undefined,
+    phone: raw.phone as string | undefined,
+    age: raw.age as string | undefined,
+    gender: raw.gender as string | undefined,
+    languages: raw.languages as string | undefined,
+    instagramHandle: raw.instagram_handle as string | undefined,
+    tiktokHandle: raw.tiktok_handle as string | undefined,
+    telegramHandle: raw.telegram_handle as string | undefined,
+    otherPlatforms: raw.other_platforms as string | undefined,
+    address: raw.address as string | undefined,
+    creatorStatus: raw.status as string | undefined,
   };
 }
 
@@ -410,6 +449,84 @@ export const campaignsService = {
       ...(opts?.subject ? { subject: opts.subject } : {}),
       ...(opts?.message ? { message: opts.message } : {}),
     });
+  },
+
+  // ── Shortlist / Discovery ─────────────────────────────────────────────────
+
+  getBudgetPreview: async (
+    campaignId: string,
+    totalBudget: number,
+    objective: DiscoveryObjective
+  ): Promise<BudgetPreview> => {
+    const { data } = await apiClient.get(ENDPOINTS.SHORTLISTS.BUDGET_PREVIEW(campaignId), {
+      params: { total_budget: totalBudget, objective },
+    });
+    return data as BudgetPreview;
+  },
+
+  runDiscovery: async (campaignId: string, filters: DiscoveryFilters): Promise<DiscoveryResult> => {
+    const { data } = await apiClient.post(
+      ENDPOINTS.SHORTLISTS.RUN_DISCOVERY(campaignId),
+      { lead_id: campaignId, ...filters },
+      { timeout: 30_000 }
+    );
+    return data as DiscoveryResult;
+  },
+
+  getShortlist: async (
+    campaignId: string,
+    params?: { batch_number?: number; status?: string }
+  ): Promise<ShortlistResponse> => {
+    const { data } = await apiClient.get(ENDPOINTS.SHORTLISTS.GET(campaignId), { params });
+    return data as ShortlistResponse;
+  },
+
+  updateShortlistEntry: async (
+    campaignId: string,
+    entryId: string,
+    payload: { status: ShortlistEntryStatus; rejection_reason?: string }
+  ): Promise<void> => {
+    await apiClient.patch(ENDPOINTS.SHORTLISTS.UPDATE_ENTRY(campaignId, entryId), payload);
+  },
+
+  loadNextBatch: async (
+    campaignId: string,
+    opts?: { max_results?: number; additional_niches?: string[]; additional_locations?: string[] }
+  ): Promise<DiscoveryResult> => {
+    const { data } = await apiClient.post(
+      ENDPOINTS.SHORTLISTS.NEXT_BATCH(campaignId),
+      { lead_id: campaignId, ...(opts ?? {}) },
+      { timeout: 30_000 }
+    );
+    return data as DiscoveryResult;
+  },
+
+  getShortlistStats: async (campaignId: string): Promise<ShortlistStats> => {
+    const { data } = await apiClient.get(ENDPOINTS.SHORTLISTS.STATS(campaignId));
+    return data as ShortlistStats;
+  },
+
+  transitionPhase: async (
+    campaignId: string,
+    targetPhase: string,
+    reason?: string
+  ): Promise<void> => {
+    await apiClient.patch(ENDPOINTS.SHORTLISTS.PHASE_TRANSITION(campaignId), {
+      target_phase: targetPhase,
+      ...(reason ? { reason } : {}),
+    });
+  },
+
+  // Creator detail (basic, used by existing card modal)
+  getCreatorDetail: async (creatorId: string): Promise<Influencer> => {
+    const { data } = await apiClient.get(ENDPOINTS.CAMPAIGN_INFLUENCERS.DETAIL(creatorId));
+    return mapInfluencer(data as Record<string, unknown>);
+  },
+
+  // Creator full profile with searchapi_data (IG/TT posts, stats)
+  getCreatorProfile: async (creatorId: string): Promise<CreatorProfile> => {
+    const { data } = await apiClient.get(ENDPOINTS.CAMPAIGN_INFLUENCERS.DETAIL(creatorId));
+    return data as CreatorProfile;
   },
 
   // Influencers (global)

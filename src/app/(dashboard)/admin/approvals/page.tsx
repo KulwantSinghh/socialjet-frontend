@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import styles from './page.module.css';
+import docStyles from './documents.module.css';
 import { useApprovals } from '@/hooks/useApprovals';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/services/api/client';
 import { ENDPOINTS } from '@/services/api/endpoints';
 import { cn } from '@/lib/utils';
 import { generateProposalHTML, generateProposalPageHTML } from '@/lib/generateProposalHTML';
+import { generateOnboardingHTML } from '@/lib/generateOnboardingHTML';
 import type { IntelligenceCall, SalesAnalysis } from '@/types/intelligence.types';
+import type { PendingDocumentApproval } from '@/types/campaign.types';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const DownloadIcon = () => (
@@ -95,7 +98,73 @@ function OutcomeChip({ outcome }: { outcome: string }) {
   );
 }
 
-// ─── Left list item ───────────────────────────────────────────────────────────
+// ─── Reject modal (shared) ────────────────────────────────────────────────────
+function RejectModal({
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  onConfirm: (reason: string, notes: string) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+
+  return (
+    <div className={styles.modalOverlay} onClick={onCancel}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <h3 className={styles.modalTitle}>Reject Document</h3>
+          <button className={styles.modalClose} onClick={onCancel}>
+            ✕
+          </button>
+        </div>
+        <div className={styles.modalBody}>
+          <div className={styles.modalField}>
+            <label className={styles.modalLabel}>
+              Reason <span className={styles.required}>*</span>
+            </label>
+            <input
+              className={styles.modalInput}
+              placeholder="e.g. Please revise the campaign objectives section."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className={styles.modalField}>
+            <label className={styles.modalLabel}>
+              Notes <span className={styles.optional}>(optional)</span>
+            </label>
+            <textarea
+              className={styles.modalTextarea}
+              placeholder="Additional notes…"
+              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className={styles.modalFooter}>
+          <button className={styles.modalCancelBtn} onClick={onCancel} disabled={loading}>
+            Cancel
+          </button>
+          <button
+            className={styles.modalRejectBtn}
+            onClick={() => onConfirm(reason, notes)}
+            disabled={!reason.trim() || loading}
+          >
+            {loading ? 'Rejecting…' : 'Confirm Reject'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Proposals section ────────────────────────────────────────────────────────
+
 function CallListItem({
   call,
   isSelected,
@@ -154,72 +223,6 @@ function CallListItem({
   );
 }
 
-// ─── Reject modal ─────────────────────────────────────────────────────────────
-function RejectModal({
-  onConfirm,
-  onCancel,
-  loading,
-}: {
-  onConfirm: (reason: string, notes: string) => void;
-  onCancel: () => void;
-  loading: boolean;
-}) {
-  const [reason, setReason] = useState('');
-  const [notes, setNotes] = useState('');
-
-  return (
-    <div className={styles.modalOverlay} onClick={onCancel}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Reject Proposal</h3>
-          <button className={styles.modalClose} onClick={onCancel}>
-            ✕
-          </button>
-        </div>
-        <div className={styles.modalBody}>
-          <div className={styles.modalField}>
-            <label className={styles.modalLabel}>
-              Reason <span className={styles.required}>*</span>
-            </label>
-            <input
-              className={styles.modalInput}
-              placeholder="e.g. Budget too high"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className={styles.modalField}>
-            <label className={styles.modalLabel}>
-              Notes <span className={styles.optional}>(optional)</span>
-            </label>
-            <textarea
-              className={styles.modalTextarea}
-              placeholder="e.g. Reduce pricing by 10%"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className={styles.modalFooter}>
-          <button className={styles.modalCancelBtn} onClick={onCancel} disabled={loading}>
-            Cancel
-          </button>
-          <button
-            className={styles.modalRejectBtn}
-            onClick={() => onConfirm(reason, notes)}
-            disabled={!reason.trim() || loading}
-          >
-            {loading ? 'Rejecting…' : 'Confirm Reject'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Right detail panel ───────────────────────────────────────────────────────
 function ProposalDetail({
   call,
   onDone,
@@ -255,14 +258,16 @@ function ProposalDetail({
   const downloadPDF = () => {
     if (!analysis) return;
     const html = generateProposalHTML(analysis);
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => {
-      win.focus();
-      win.print();
-    }, 600);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win)
+      setTimeout(() => {
+        win.focus();
+        win.print();
+        URL.revokeObjectURL(url);
+      }, 800);
+    else URL.revokeObjectURL(url);
   };
 
   const handleAccept = async () => {
@@ -270,15 +275,11 @@ function ProposalDetail({
     setAccepting(true);
     setActionError(null);
     try {
-      // Step 1: Approve
       setAcceptingStep('approving');
       await apiClient.post(ENDPOINTS.APPROVALS.APPROVE(call.call_id), { notes: 'Approved' });
-
-      // Step 2: Send HTML to backend — backend renders PDF via Puppeteer
       setAcceptingStep('sending');
       const html = generateProposalHTML(analysis);
       await apiClient.post(ENDPOINTS.APPROVALS.SEND_EMAIL(call.call_id), { html });
-
       onDone(call.call_id, 'accepted');
     } catch {
       setActionError('Failed to approve or send email. Please try again.');
@@ -306,7 +307,6 @@ function ProposalDetail({
 
   return (
     <div className={styles.detail}>
-      {/* Sticky action bar */}
       <div className={styles.detailBar}>
         <div className={styles.detailBarLeft}>
           <p className={styles.detailBarName}>{call.lead_name}</p>
@@ -341,7 +341,6 @@ function ProposalDetail({
           </button>
         </div>
       </div>
-
       {showRejectModal && (
         <RejectModal
           loading={rejecting}
@@ -349,8 +348,6 @@ function ProposalDetail({
           onCancel={() => setShowRejectModal(false)}
         />
       )}
-
-      {/* Proposal document */}
       <div className={styles.detailBody}>
         {isLoading ? (
           <div className={styles.proposalLoading}>
@@ -370,23 +367,255 @@ function ProposalDetail({
   );
 }
 
+// ─── Documents section ────────────────────────────────────────────────────────
+
+function DocListItem({
+  doc,
+  isSelected,
+  doneState,
+  onClick,
+}: {
+  doc: PendingDocumentApproval;
+  isSelected: boolean;
+  doneState: 'approved' | 'rejected' | null;
+  onClick: () => void;
+}) {
+  const initials = doc.lead_name
+    ? doc.lead_name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : '??';
+  const submittedDate = doc.submitted_at
+    ? new Date(doc.submitted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    : '';
+
+  return (
+    <button
+      className={cn(
+        styles.listItem,
+        isSelected && styles.listItemActive,
+        doneState === 'approved' && styles.listItemAccepted,
+        doneState === 'rejected' && styles.listItemRejected
+      )}
+      onClick={onClick}
+    >
+      <div className={styles.listItemAvatar}>{initials}</div>
+      <div className={styles.listItemBody}>
+        <div className={styles.listItemTop}>
+          <span className={styles.listItemName}>{doc.lead_name}</span>
+          {doneState ? (
+            <span
+              className={cn(
+                styles.donePill,
+                doneState === 'approved' ? styles.donePillAccepted : styles.donePillRejected
+              )}
+            >
+              {doneState === 'approved' ? '✓ Approved' : '✕ Rejected'}
+            </span>
+          ) : (
+            <span className={docStyles.pendingPill}>Pending</span>
+          )}
+        </div>
+        <span className={styles.listItemCompany}>{doc.lead_company}</span>
+        <div className={styles.listItemMeta}>
+          <span>{doc.doc_type === 'onboarding' ? 'Onboarding Doc' : doc.doc_type}</span>
+          {submittedDate && <span>· {submittedDate}</span>}
+        </div>
+      </div>
+      <ChevronRightIcon />
+    </button>
+  );
+}
+
+function DocumentDetail({
+  doc,
+  onDone,
+}: {
+  doc: PendingDocumentApproval;
+  onDone: (id: string, state: 'approved' | 'rejected') => void;
+}) {
+  const [approving, setApproving] = useState(false);
+  const [approvingStep, setApprovingStep] = useState<'approving' | 'sending' | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const hasDocument = !!doc.document;
+
+  const getHTML = () => {
+    if (!doc.document) return '';
+    return generateOnboardingHTML(doc.document, doc.lead_name, doc.lead_email);
+  };
+
+  const downloadPDF = () => {
+    const html = getHTML();
+    if (!html) return;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win)
+      setTimeout(() => {
+        win.focus();
+        win.print();
+        URL.revokeObjectURL(url);
+      }, 800);
+    else URL.revokeObjectURL(url);
+  };
+
+  const handleApprove = async () => {
+    setApproving(true);
+    setActionError(null);
+    try {
+      setApprovingStep('approving');
+      await apiClient.post(ENDPOINTS.CAMPAIGN_APPROVALS.APPROVE_DOCUMENT(doc.onboarding_id));
+
+      setApprovingStep('sending');
+      const html = getHTML();
+      const brandName = doc.document?.brand?.name || doc.lead_company;
+      await apiClient.post(ENDPOINTS.CAMPAIGN_DOCUMENTS.ONBOARDING_SEND_PDF(doc.lead_id), {
+        html,
+        to_email: doc.lead_email,
+        subject: `SocialJet × ${brandName} — Onboarding Document`,
+        message: '',
+      });
+
+      onDone(doc.onboarding_id, 'approved');
+    } catch {
+      setActionError('Failed to approve or send document. Please try again.');
+    } finally {
+      setApproving(false);
+      setApprovingStep(null);
+    }
+  };
+
+  const handleRejectConfirm = async (reason: string) => {
+    setRejecting(true);
+    setActionError(null);
+    try {
+      await apiClient.post(ENDPOINTS.CAMPAIGN_APPROVALS.REJECT_DOCUMENT(doc.onboarding_id), {
+        reason,
+      });
+      setShowRejectModal(false);
+      onDone(doc.onboarding_id, 'rejected');
+    } catch {
+      setActionError('Failed to reject. Please try again.');
+      setRejecting(false);
+    }
+  };
+
+  return (
+    <div className={styles.detail}>
+      <div className={styles.detailBar}>
+        <div className={styles.detailBarLeft}>
+          <p className={styles.detailBarName}>{doc.lead_name}</p>
+          <p className={styles.detailBarCompany}>
+            {doc.lead_company} · {doc.lead_email}
+          </p>
+        </div>
+        <div className={styles.detailBarRight}>
+          {actionError && <span className={styles.actionError}>{actionError}</span>}
+          <button className={styles.pdfBtn} onClick={downloadPDF} disabled={!hasDocument}>
+            <DownloadIcon /> PDF
+          </button>
+          <button
+            className={styles.btnReject}
+            onClick={() => setShowRejectModal(true)}
+            disabled={rejecting || approving}
+          >
+            <XIcon /> Reject
+          </button>
+          <button
+            className={styles.btnApprove}
+            onClick={handleApprove}
+            disabled={approving || rejecting || !hasDocument}
+          >
+            {approvingStep === 'approving' ? (
+              'Approving…'
+            ) : approvingStep === 'sending' ? (
+              'Sending PDF…'
+            ) : (
+              <>
+                <CheckIcon /> Approve & Send
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {showRejectModal && (
+        <RejectModal
+          loading={rejecting}
+          onConfirm={handleRejectConfirm}
+          onCancel={() => setShowRejectModal(false)}
+        />
+      )}
+
+      <div className={styles.detailBody}>
+        {!hasDocument ? (
+          <div className={styles.proposalEmpty}>Document content not available.</div>
+        ) : (
+          <div className={styles.pdoc} dangerouslySetInnerHTML={{ __html: getHTML() }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ApprovalsPage() {
   const queryClient = useQueryClient();
-  const { data, isLoading, isError } = useApprovals();
-  const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
-  const [doneMap, setDoneMap] = useState<Record<string, 'accepted' | 'rejected'>>({});
+  const [activeTab, setActiveTab] = useState<'proposals' | 'documents'>('proposals');
 
-  const calls = data?.calls ?? [];
+  // Proposals
+  const {
+    data: proposalsData,
+    isLoading: proposalsLoading,
+    isError: proposalsError,
+  } = useApprovals();
+  const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
+  const [callDoneMap, setCallDoneMap] = useState<Record<string, 'accepted' | 'rejected'>>({});
+
+  // Documents
+  const {
+    data: docsData,
+    isLoading: docsLoading,
+    isError: docsError,
+  } = useQuery({
+    queryKey: ['pending-document-approvals'],
+    queryFn: async () => {
+      const { data } = await apiClient.get(ENDPOINTS.CAMPAIGN_APPROVALS.PENDING_DOCUMENTS);
+      return data as { documents: PendingDocumentApproval[]; count: number };
+    },
+    staleTime: 30_000,
+  });
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [docDoneMap, setDocDoneMap] = useState<Record<string, 'approved' | 'rejected'>>({});
+
+  const calls = proposalsData?.calls ?? [];
   const selectedCall = calls.find((c) => c.call_id === selectedCallId) ?? null;
 
-  const handleDone = (callId: string, state: 'accepted' | 'rejected') => {
-    setDoneMap((prev) => ({ ...prev, [callId]: state }));
+  const documents = docsData?.documents ?? [];
+  const selectedDoc = documents.find((d) => d.onboarding_id === selectedDocId) ?? null;
+
+  const handleCallDone = (callId: string, state: 'accepted' | 'rejected') => {
+    setCallDoneMap((prev) => ({ ...prev, [callId]: state }));
     void queryClient.invalidateQueries({ queryKey: ['approvals', 'pending'] });
-    // Move selection to next pending call
-    const next = calls.find((c) => c.call_id !== callId && !doneMap[c.call_id]);
+    const next = calls.find((c) => c.call_id !== callId && !callDoneMap[c.call_id]);
     setSelectedCallId(next?.call_id ?? null);
   };
+
+  const handleDocDone = (id: string, state: 'approved' | 'rejected') => {
+    setDocDoneMap((prev) => ({ ...prev, [id]: state }));
+    void queryClient.invalidateQueries({ queryKey: ['pending-document-approvals'] });
+    const next = documents.find((d) => d.onboarding_id !== id && !docDoneMap[d.onboarding_id]);
+    setSelectedDocId(next?.onboarding_id ?? null);
+  };
+
+  const isLoading = activeTab === 'proposals' ? proposalsLoading : docsLoading;
+  const isError = activeTab === 'proposals' ? proposalsError : docsError;
 
   if (isLoading) {
     return (
@@ -404,67 +633,150 @@ export default function ApprovalsPage() {
     );
   }
 
+  const pendingDocsCount = documents.filter((d) => !docDoneMap[d.onboarding_id]).length;
+
   return (
     <div className={styles.page}>
       {/* Page header */}
       <div className={styles.header}>
         <h1 className={styles.title}>
           Approvals
-          {calls.length > 0 && <span className={styles.badge}>{calls.length}</span>}
+          {(calls.length > 0 || pendingDocsCount > 0) && (
+            <span className={styles.badge}>{calls.length + pendingDocsCount}</span>
+          )}
         </h1>
-        <p className={styles.subtitle}>Review proposals before they are sent to clients</p>
+        <p className={styles.subtitle}>
+          Review proposals and onboarding documents before they are sent to clients
+        </p>
       </div>
 
-      {calls.length === 0 ? (
-        <div className={styles.emptyState}>
-          <svg
-            className={styles.emptyIcon}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p className={styles.emptyTitle}>All caught up!</p>
-          <p className={styles.emptyText}>No proposals are pending approval right now.</p>
-        </div>
-      ) : (
-        <div className={styles.splitLayout}>
-          {/* ── Left list ── */}
-          <div className={styles.listPanel}>
-            <p className={styles.listCount}>{calls.length} pending</p>
-            <div className={styles.listScroll}>
-              {calls.map((call) => (
-                <CallListItem
-                  key={call.call_id}
-                  call={call}
-                  isSelected={selectedCallId === call.call_id}
-                  doneState={doneMap[call.call_id] ?? null}
-                  onClick={() => setSelectedCallId(call.call_id)}
+      {/* Tabs */}
+      <div className={docStyles.tabs}>
+        <button
+          className={cn(docStyles.tab, activeTab === 'proposals' && docStyles.tabActive)}
+          onClick={() => setActiveTab('proposals')}
+        >
+          Sales Proposals
+          {calls.length > 0 && <span className={docStyles.tabBadge}>{calls.length}</span>}
+        </button>
+        <button
+          className={cn(docStyles.tab, activeTab === 'documents' && docStyles.tabActive)}
+          onClick={() => setActiveTab('documents')}
+        >
+          Onboarding Documents
+          {pendingDocsCount > 0 && <span className={docStyles.tabBadge}>{pendingDocsCount}</span>}
+        </button>
+      </div>
+
+      {/* ── Proposals tab ── */}
+      {activeTab === 'proposals' &&
+        (calls.length === 0 ? (
+          <div className={styles.emptyState}>
+            <svg
+              className={styles.emptyIcon}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className={styles.emptyTitle}>All caught up!</p>
+            <p className={styles.emptyText}>No proposals are pending approval right now.</p>
+          </div>
+        ) : (
+          <div className={styles.splitLayout}>
+            <div className={styles.listPanel}>
+              <p className={styles.listCount}>{calls.length} pending</p>
+              <div className={styles.listScroll}>
+                {calls.map((call) => (
+                  <CallListItem
+                    key={call.call_id}
+                    call={call}
+                    isSelected={selectedCallId === call.call_id}
+                    doneState={callDoneMap[call.call_id] ?? null}
+                    onClick={() => setSelectedCallId(call.call_id)}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className={styles.detailPanel}>
+              {selectedCall ? (
+                <ProposalDetail
+                  key={selectedCall.call_id}
+                  call={selectedCall}
+                  onDone={handleCallDone}
                 />
-              ))}
+              ) : (
+                <div className={styles.detailEmpty}>
+                  <FileIcon />
+                  <p className={styles.detailEmptyTitle}>Select a proposal to review</p>
+                  <p className={styles.detailEmptyText}>Click any item from the list on the left</p>
+                </div>
+              )}
             </div>
           </div>
+        ))}
 
-          {/* ── Right detail ── */}
-          <div className={styles.detailPanel}>
-            {selectedCall ? (
-              <ProposalDetail key={selectedCall.call_id} call={selectedCall} onDone={handleDone} />
-            ) : (
-              <div className={styles.detailEmpty}>
-                <FileIcon />
-                <p className={styles.detailEmptyTitle}>Select a proposal to review</p>
-                <p className={styles.detailEmptyText}>Click any item from the list on the left</p>
-              </div>
-            )}
+      {/* ── Documents tab ── */}
+      {activeTab === 'documents' &&
+        (documents.length === 0 ? (
+          <div className={styles.emptyState}>
+            <svg
+              className={styles.emptyIcon}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className={styles.emptyTitle}>All caught up!</p>
+            <p className={styles.emptyText}>
+              No onboarding documents are pending approval right now.
+            </p>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className={styles.splitLayout}>
+            <div className={styles.listPanel}>
+              <p className={styles.listCount}>{documents.length} pending</p>
+              <div className={styles.listScroll}>
+                {documents.map((doc) => (
+                  <DocListItem
+                    key={doc.onboarding_id}
+                    doc={doc}
+                    isSelected={selectedDocId === doc.onboarding_id}
+                    doneState={docDoneMap[doc.onboarding_id] ?? null}
+                    onClick={() => setSelectedDocId(doc.onboarding_id)}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className={styles.detailPanel}>
+              {selectedDoc ? (
+                <DocumentDetail
+                  key={selectedDoc.onboarding_id}
+                  doc={selectedDoc}
+                  onDone={handleDocDone}
+                />
+              ) : (
+                <div className={styles.detailEmpty}>
+                  <FileIcon />
+                  <p className={styles.detailEmptyTitle}>Select a document to review</p>
+                  <p className={styles.detailEmptyText}>Click any item from the list on the left</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
     </div>
   );
 }

@@ -82,6 +82,7 @@ export interface Lead {
   company?: string;
   source: LeadSource;
   status: LeadStatus;
+  pipeline_status?: string;
   notes?: string;
   deal_value?: string | number;
   contact_person?: string;

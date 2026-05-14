@@ -94,6 +94,16 @@ export const ENDPOINTS = {
     KOL_BRIEF_SEND_PDF: (leadId: string) => `/kol-brief/${leadId}/send-pdf`,
   },
 
+  SHORTLISTS: {
+    BUDGET_PREVIEW: (campaignId: string) => `/shortlists/${campaignId}/budget-preview`,
+    RUN_DISCOVERY: (campaignId: string) => `/shortlists/${campaignId}`,
+    GET: (campaignId: string) => `/shortlists/${campaignId}`,
+    UPDATE_ENTRY: (campaignId: string, entryId: string) => `/shortlists/${campaignId}/${entryId}`,
+    NEXT_BATCH: (campaignId: string) => `/shortlists/${campaignId}/next-batch`,
+    STATS: (campaignId: string) => `/shortlists/${campaignId}/stats`,
+    PHASE_TRANSITION: (campaignId: string) => `/campaigns/${campaignId}/phase`,
+  },
+
   CAMPAIGN_INFLUENCERS: {
     LIST: '/creators/',
     DETAIL: (id: string) => `/creators/${id}`,
@@ -124,6 +134,9 @@ export const ENDPOINTS = {
     LIST: '/campaign-approvals',
     APPROVE: (id: string) => `/campaign-approvals/${id}/approve`,
     REJECT: (id: string) => `/campaign-approvals/${id}/reject`,
+    APPROVE_DOCUMENT: (id: string) => `/campaign-approvals/${id}/approve?type=document`,
+    REJECT_DOCUMENT: (id: string) => `/campaign-approvals/${id}/reject?type=document`,
+    PENDING_DOCUMENTS: '/onboarding/pending-approvals',
   },
 
   CAMPAIGN_MANAGERS: {

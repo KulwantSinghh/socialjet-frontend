@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import styles from './StagePanel.module.css';
 import { ProposalEditor } from '@/components/shared/ProposalEditor';
+import { InfluencerDiscovery } from '@/components/campaigns/InfluencerDiscovery';
 import type { Editor } from '@tiptap/react';
 import {
   useQuestionnaire,
@@ -19,16 +20,9 @@ import { campaignsService } from '@/services/campaigns.service';
 import { useQueryClient } from '@tanstack/react-query';
 import type {
   CampaignLeadStage,
-  CampaignInfluencer,
   OnboardingDocument,
   KolBriefDocument,
 } from '@/types/campaign.types';
-
-function formatFollowers(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
 
 // ─── Lead Stage (unassigned / assigned) ──────────────────────────────────────
 function LeadStage({ leadId }: { leadId: string }) {
@@ -1780,12 +1774,14 @@ function DocumentsStage({ leadId }: { leadId: string }) {
     cm_approved: 'Submitted to Admin',
     admin_approved: 'Admin Approved',
     sent_to_client: 'Sent to Client',
+    rejected: 'Rejected',
   };
   const statusStyle: Record<string, string> = {
     draft: styles.statusDraft,
     cm_approved: styles.statusApproved,
     admin_approved: styles.statusApproved,
     sent_to_client: styles.statusSent,
+    rejected: styles.statusRejected,
   };
 
   const handleEditorReady = useCallback((editor: Editor) => {
@@ -1865,18 +1861,6 @@ ${styleBlocks}
     return docRef.current?.outerHTML ?? '';
   };
 
-  const handleOpenSendModal = () => {
-    const brandName =
-      activeTab === 'onboarding'
-        ? (onboardingDoc?.document?.brand?.name ?? '')
-        : (kolBrief?.document?.campaign_overview?.brand_name ?? '');
-    const docType = activeTab === 'onboarding' ? 'Onboarding Document' : 'KOL Brief';
-    setSendSubject(`SocialJet ${docType}${brandName ? ` — ${brandName}` : ''}`);
-    setSendEmail('');
-    setSendMessage('');
-    setShowSendModal(true);
-  };
-
   const handleSend = async () => {
     const html = getDocHTML();
     if (!html) return;
@@ -1947,6 +1931,11 @@ ${styleBlocks}
 
   // Initial HTML for editor — use current rendered card HTML
   const editorInitialHTML = docRef.current?.outerHTML ?? '';
+
+  const activeRejectionReason =
+    activeTab === 'onboarding' && onboardingDoc?.status === 'rejected'
+      ? onboardingDoc.rejectionReason
+      : undefined;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -2020,36 +2009,19 @@ ${styleBlocks}
                   PDF
                 </button>
                 <button
-                  className={styles.docActionIconBtn}
-                  aria-label="Send document"
-                  onClick={handleOpenSendModal}
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  disabled={submitting || activeTab === 'kol_brief'}
+                  style={
+                    activeTab === 'kol_brief'
+                      ? { opacity: 0.35, cursor: 'not-allowed', filter: 'blur(0.4px)' }
+                      : undefined
+                  }
+                  onClick={
+                    activeTab === 'onboarding' ? handleSubmitOnboarding : handleSubmitKolBrief
+                  }
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                  Send
+                  {submitting ? 'Submitting…' : 'Send for Approval'}
                 </button>
-                {activeStatus === 'draft' && (
-                  <button
-                    className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
-                    disabled={submitting}
-                    onClick={
-                      activeTab === 'onboarding' ? handleSubmitOnboarding : handleSubmitKolBrief
-                    }
-                  >
-                    {submitting ? 'Submitting…' : 'Send for Approval'}
-                  </button>
-                )}
               </>
             )}
           </div>
@@ -2083,6 +2055,30 @@ ${styleBlocks}
           {kolBrief && <span style={{ marginLeft: 6, color: 'var(--color-success-600)' }}>✓</span>}
         </button>
       </div>
+
+      {/* Rejection reason banner */}
+      {activeRejectionReason && (
+        <div className={styles.rejectionBanner}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ flexShrink: 0 }}
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>
+            <strong>Rejected by Admin:</strong> {activeRejectionReason}
+          </span>
+        </div>
+      )}
 
       {/* Body */}
       <div className={styles.docViewer}>
@@ -2238,122 +2234,6 @@ ${styleBlocks}
         </div>
       )}
     </div>
-  );
-}
-
-// ─── Influencer Selection Stage ───────────────────────────────────────────────
-function InfluencerSelectionStage({ leadId }: { leadId: string }) {
-  const { data: influencers, isLoading } = useLeadInfluencers(leadId);
-  const qc = useQueryClient();
-
-  async function updateStatus(influencerId: string, status: CampaignInfluencer['status']) {
-    await campaignsService.updateInfluencerStatus(leadId, influencerId, status);
-    qc.invalidateQueries({ queryKey: ['lead-influencers', leadId] });
-  }
-
-  if (isLoading) return <StageSkeleton />;
-
-  function getInitials(name: string) {
-    return name
-      .split(' ')
-      .map((w) => w[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  }
-
-  return (
-    <>
-      <div className={styles.stageHeader}>
-        <h2 className={styles.stageTitle}>Influencer Selection</h2>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <button className={`${styles.btn} ${styles.btnSecondary}`}>+ Add Influencer</button>
-          <button
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            onClick={() => campaignsService.sendInfluencersToClient(leadId)}
-          >
-            Send to Client
-          </button>
-        </div>
-      </div>
-      <div className={styles.stageBody}>
-        <div className={styles.influencerGrid}>
-          {(influencers ?? []).map((inf) => (
-            <div
-              key={inf.id}
-              className={`${styles.influencerCard} ${inf.status === 'cm_approved' || inf.status === 'client_approved' ? styles.influencerCardApproved : inf.status === 'cm_rejected' || inf.status === 'client_rejected' ? styles.influencerCardRejected : ''}`}
-            >
-              <div className={styles.influencerTop}>
-                <div className={styles.influencerAvatar}>{getInitials(inf.name)}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className={styles.influencerName}>{inf.name}</div>
-                  <div className={styles.influencerHandle}>@{inf.handle}</div>
-                </div>
-                <span
-                  className={`${styles.platformBadge} ${styles[`platform${inf.platform.charAt(0).toUpperCase() + inf.platform.slice(1)}` as keyof typeof styles]}`}
-                >
-                  {inf.platform}
-                </span>
-              </div>
-              <div className={styles.influencerStats}>
-                <div className={styles.statItem}>
-                  <span className={styles.statValue}>{formatFollowers(inf.followers)}</span>
-                  <span className={styles.statLabel}>Followers</span>
-                </div>
-                <div className={styles.statItem}>
-                  <span className={styles.statValue}>{inf.engagementRate.toFixed(1)}%</span>
-                  <span className={styles.statLabel}>Engagement</span>
-                </div>
-              </div>
-              {inf.isRecommended && (
-                <span
-                  className={`${styles.statusBadge} ${styles.statusPending}`}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  AI Recommended
-                </span>
-              )}
-              {(inf.status === 'recommended' || inf.status === 'assigned') && (
-                <div className={styles.influencerActions}>
-                  <button
-                    className={`${styles.btn} ${styles.btnSuccess} ${styles.btnSm}`}
-                    onClick={() => updateStatus(inf.id, 'cm_approved')}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    className={`${styles.btn} ${styles.btnDanger} ${styles.btnSm}`}
-                    onClick={() => updateStatus(inf.id, 'cm_rejected')}
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
-              {(inf.status === 'cm_approved' || inf.status === 'client_approved') && (
-                <span
-                  className={`${styles.statusBadge} ${styles.statusApproved}`}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  {inf.status === 'client_approved' ? 'Client Approved' : 'CM Approved'}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-        {!influencers?.length && (
-          <div
-            style={{
-              color: 'var(--color-text-tertiary)',
-              fontSize: 'var(--text-sm)',
-              textAlign: 'center',
-              padding: 'var(--space-8)',
-            }}
-          >
-            No influencers added yet. Add from the Influencers page or wait for AI recommendations.
-          </div>
-        )}
-      </div>
-    </>
   );
 }
 
@@ -2608,7 +2488,7 @@ export function StagePanel({ leadId, activeStage }: Props) {
       case 'documents':
         return <DocumentsStage leadId={leadId} />;
       case 'influencer':
-        return <InfluencerSelectionStage leadId={leadId} />;
+        return <InfluencerDiscovery leadId={leadId} />;
       case 'deal':
         return <DealStage leadId={leadId} />;
       case 'content':

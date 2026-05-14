@@ -557,6 +557,20 @@
   background: var(--color-error-50);
   color: var(--color-error-600);
 }
+
+.rejectionBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 var(--space-5) var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-error-50);
+  border: 1px solid var(--color-error-200);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  color: var(--color-error-700);
+  line-height: 1.5;
+}
 .statusScheduled {
   background: var(--color-primary-50);
   color: var(--color-primary-700);

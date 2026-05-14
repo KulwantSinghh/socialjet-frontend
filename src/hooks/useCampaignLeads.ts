@@ -108,6 +108,117 @@ export function useLeadInfluencers(leadId: string) {
   });
 }
 
+// ── Discovery / Shortlist hooks ───────────────────────────────────────────────
+
+export function useBudgetPreview(
+  campaignId: string,
+  totalBudget: number,
+  objective: import('@/types/campaign.types').DiscoveryObjective
+) {
+  return useQuery({
+    queryKey: ['budget-preview', campaignId, totalBudget, objective],
+    queryFn: () => campaignsService.getBudgetPreview(campaignId, totalBudget, objective),
+    staleTime: 60_000,
+    enabled: !!campaignId && totalBudget > 0,
+  });
+}
+
+export function useShortlist(
+  campaignId: string,
+  params?: { batch_number?: number; status?: string }
+) {
+  return useQuery({
+    queryKey: ['shortlist', campaignId, params],
+    queryFn: () => campaignsService.getShortlist(campaignId, params),
+    staleTime: 15_000,
+    enabled: !!campaignId,
+  });
+}
+
+export function useShortlistStats(campaignId: string) {
+  return useQuery({
+    queryKey: ['shortlist-stats', campaignId],
+    queryFn: () => campaignsService.getShortlistStats(campaignId),
+    staleTime: 15_000,
+    enabled: !!campaignId,
+  });
+}
+
+export function useRunDiscovery(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (filters: import('@/types/campaign.types').DiscoveryFilters) =>
+      campaignsService.runDiscovery(campaignId, filters),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shortlist', campaignId] });
+      qc.invalidateQueries({ queryKey: ['shortlist-stats', campaignId] });
+    },
+  });
+}
+
+export function useUpdateShortlistEntry(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      entryId,
+      status,
+      rejection_reason,
+    }: {
+      entryId: string;
+      status: import('@/types/campaign.types').ShortlistEntryStatus;
+      rejection_reason?: string;
+    }) => campaignsService.updateShortlistEntry(campaignId, entryId, { status, rejection_reason }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shortlist', campaignId] });
+      qc.invalidateQueries({ queryKey: ['shortlist-stats', campaignId] });
+    },
+  });
+}
+
+export function useLoadNextBatch(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (opts?: {
+      max_results?: number;
+      additional_niches?: string[];
+      additional_locations?: string[];
+    }) => campaignsService.loadNextBatch(campaignId, opts),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shortlist', campaignId] });
+      qc.invalidateQueries({ queryKey: ['shortlist-stats', campaignId] });
+    },
+  });
+}
+
+export function useTransitionPhase(campaignId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ targetPhase, reason }: { targetPhase: string; reason?: string }) =>
+      campaignsService.transitionPhase(campaignId, targetPhase, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['campaign-leads'] });
+    },
+  });
+}
+
+export function useCreatorDetail(creatorId: string | null) {
+  return useQuery({
+    queryKey: ['creator-detail', creatorId],
+    queryFn: () => campaignsService.getCreatorDetail(creatorId!),
+    staleTime: 60_000,
+    enabled: !!creatorId,
+  });
+}
+
+export function useCreatorProfile(creatorId: string | null) {
+  return useQuery({
+    queryKey: ['creator-profile', creatorId],
+    queryFn: () => campaignsService.getCreatorProfile(creatorId!),
+    staleTime: 60_000,
+    enabled: !!creatorId,
+  });
+}
+
 export function useAllInfluencers(params?: { search?: string; platform?: string; niche?: string }) {
   return useQuery({
     queryKey: ['influencers', params],

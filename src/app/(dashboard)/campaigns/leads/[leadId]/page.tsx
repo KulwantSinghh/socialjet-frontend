@@ -35,6 +35,9 @@ export default function LeadDetailPage({ params }: Props) {
     questionnaire_received: 'meeting_booked',
     meeting_booked: 'meeting_done',
     meeting_done: 'documents_generated',
+    documents_generated: 'documents_cm_approved',
+    documents_cm_approved: 'documents_admin_approved',
+    documents_admin_approved: 'documents_sent_to_client',
   };
   const defaultActive = NEXT_STAGE[currentStage] ?? currentStage;
 

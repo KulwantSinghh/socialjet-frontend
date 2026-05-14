@@ -8,11 +8,13 @@ import styles from './PipelineBoard.module.css';
 import { cn } from '@/lib/utils';
 
 // ─── Column definitions ───────────────────────────────────────────────────────
+// statuses = lead.status values; pipelineStatuses = lead.pipeline_status values
 const COLUMNS = [
   {
     key: 'new',
     label: 'New Leads',
     statuses: ['new'],
+    pipelineStatuses: ['new'],
     dropStatus: 'new',
     color: '#6c63ff',
     bg: 'rgba(108,99,255,0.08)',
@@ -21,6 +23,7 @@ const COLUMNS = [
     key: 'nurturing',
     label: 'Nurturing',
     statuses: ['contacted', 'nurture', 'nurturing'],
+    pipelineStatuses: ['nurturing', 'contacted', 'nurture'],
     dropStatus: 'nurturing',
     color: '#3b82f6',
     bg: 'rgba(59,130,246,0.08)',
@@ -29,6 +32,7 @@ const COLUMNS = [
     key: 'meeting',
     label: 'Meeting',
     statuses: ['qualified', 'meeting_booked', 'rescheduled'],
+    pipelineStatuses: ['meeting', 'meeting_booked', 'qualified', 'rescheduled'],
     dropStatus: 'meeting_booked',
     color: '#f59e0b',
     bg: 'rgba(245,158,11,0.08)',
@@ -37,6 +41,7 @@ const COLUMNS = [
     key: 'proposal',
     label: 'Proposal',
     statuses: ['proposal', 'proposal_ready', 'proposal_sent'],
+    pipelineStatuses: ['proposal', 'proposal_ready', 'proposal_sent'],
     dropStatus: 'proposal_sent',
     color: '#f97316',
     bg: 'rgba(249,115,22,0.08)',
@@ -45,6 +50,7 @@ const COLUMNS = [
     key: 'closed',
     label: 'Closed Won',
     statuses: ['closed', 'converted'],
+    pipelineStatuses: ['closed', 'converted', 'closed_won'],
     dropStatus: 'closed',
     color: '#22c55e',
     bg: 'rgba(34,197,94,0.08)',
@@ -53,6 +59,7 @@ const COLUMNS = [
     key: 'dead',
     label: 'Dead',
     statuses: ['canceled', 'lost'],
+    pipelineStatuses: ['dead', 'canceled', 'lost'],
     dropStatus: 'lost',
     color: '#ef4444',
     bg: 'rgba(239,68,68,0.08)',
@@ -83,9 +90,17 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
 }
 
-function getColKey(status: string): ColKey {
+function getColKey(lead: { status: string; pipeline_status?: string }): ColKey {
+  // Prefer pipeline_status if present
+  if (lead.pipeline_status) {
+    for (const col of COLUMNS) {
+      if ((col.pipelineStatuses as readonly string[]).includes(lead.pipeline_status))
+        return col.key;
+    }
+  }
+  // Fall back to status
   for (const col of COLUMNS) {
-    if ((col.statuses as readonly string[]).includes(status)) return col.key;
+    if ((col.statuses as readonly string[]).includes(lead.status)) return col.key;
   }
   return 'new';
 }
@@ -323,7 +338,7 @@ export function PipelineBoard() {
       if (!lead) return;
 
       const targetCol = COLUMNS.find((c) => c.key === targetColKey)!;
-      const currentColKey = getColKey(lead.status);
+      const currentColKey = getColKey(lead);
       if (currentColKey === targetColKey) return;
 
       const newStatus = targetCol.dropStatus;
@@ -349,7 +364,7 @@ export function PipelineBoard() {
   );
 
   const grouped = COLUMNS.reduce<Record<string, Lead[]>>((acc, col) => {
-    acc[col.key] = localLeads.filter((l) => (col.statuses as readonly string[]).includes(l.status));
+    acc[col.key] = localLeads.filter((l) => getColKey(l) === col.key);
     return acc;
   }, {});
 

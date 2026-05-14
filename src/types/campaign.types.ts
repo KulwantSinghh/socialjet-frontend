@@ -195,7 +195,8 @@ export interface CampaignDocument {
   type: 'onboarding' | 'kol_briefing';
   content: string;
   document?: OnboardingDocument;
-  status: 'draft' | 'cm_approved' | 'admin_approved' | 'sent_to_client';
+  status: 'draft' | 'cm_approved' | 'admin_approved' | 'sent_to_client' | 'rejected';
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -222,6 +223,19 @@ export interface Influencer {
   location?: string;
   priceRange?: { min: number; max: number };
   isRecommended?: boolean;
+  // Extended creator fields from API
+  rate?: string;
+  email?: string;
+  phone?: string;
+  age?: string;
+  gender?: string;
+  languages?: string;
+  instagramHandle?: string;
+  tiktokHandle?: string;
+  telegramHandle?: string;
+  otherPlatforms?: string;
+  address?: string;
+  creatorStatus?: string;
 }
 
 export interface CampaignInfluencer extends Influencer {
@@ -230,6 +244,141 @@ export interface CampaignInfluencer extends Influencer {
   dealAmount?: number;
   dealNotes?: string;
   addedAt: string;
+}
+
+// ─── Discovery / Shortlist ─────────────────────────────────────────────────────
+
+export type ShortlistEntryStatus = 'pending' | 'approved' | 'rejected' | 'on_hold';
+export type DiscoveryObjective =
+  | 'brand_awareness'
+  | 'engagement'
+  | 'conversions'
+  | 'content_creation';
+export type InfluencerTier = 'nano' | 'micro' | 'mid_tier' | 'macro' | 'mega';
+
+export interface ScoreBreakdown {
+  niche_match: number;
+  budget_fit: number;
+  platform_match: number;
+  location_match: number;
+  language_match: number;
+  engagement_rate: number;
+  data_completeness: number;
+}
+
+export interface ShortlistEntry {
+  entry_id: string;
+  creator_id: string;
+  status: ShortlistEntryStatus;
+  match_score: number;
+  score_breakdown: ScoreBreakdown;
+  estimated_tier: InfluencerTier;
+  reasoning: string;
+  parsed_rate_ig?: number;
+  parsed_rate_tt?: number;
+  warnings?: string[];
+  rejection_reason?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  // Enriched creator fields
+  creator_name: string;
+  instagram_handle?: string;
+  tiktok_handle?: string;
+  niche?: string;
+  location?: string;
+  languages?: string;
+  gender?: string;
+  age?: string;
+  rate?: string;
+  follower_count?: number;
+  engagement_rate?: number;
+}
+
+export interface ShortlistSummary {
+  shortlist_id: string;
+  campaign_id: string;
+  status: string;
+  total_budget: number;
+  batch_count: number;
+  approved_count: number;
+  rejected_count: number;
+  pending_count: number;
+  on_hold_count: number;
+}
+
+export interface ShortlistResponse {
+  shortlist: ShortlistSummary;
+  entries: ShortlistEntry[];
+  summary: { total: number; approved: number; rejected: number; pending: number; on_hold: number };
+  is_fully_approved: boolean;
+  can_proceed_to_outreach: boolean;
+}
+
+export interface BudgetAllocation {
+  tier: InfluencerTier;
+  budget_amount: number;
+  rate_range: string;
+  estimated_count: number;
+  available_in_db: number;
+}
+
+export interface BudgetPreview {
+  total_budget: number;
+  objective: DiscoveryObjective;
+  allocations: BudgetAllocation[];
+  unallocated_budget: number;
+  warnings: string[];
+}
+
+export interface DiscoveryFilters {
+  lead_id?: string;
+  total_budget?: number;
+  objective?: DiscoveryObjective;
+  platforms?: string[];
+  niches?: string[];
+  locations?: string[];
+  languages?: string[];
+  min_age?: number;
+  max_age?: number;
+  gender?: string;
+  min_engagement_rate?: number;
+  exclude_brands?: string[];
+  multi_platform_required?: boolean;
+  preferred_tiers?: InfluencerTier[];
+  max_results_per_batch?: number;
+}
+
+export interface DiscoveryResult {
+  shortlist_id: string;
+  campaign_id: string;
+  batch_number: number;
+  budget_allocation: {
+    total_budget: number;
+    objective: DiscoveryObjective;
+    allocations: BudgetAllocation[];
+  };
+  matches: ShortlistEntry[];
+  total_creators_scanned: number;
+  total_after_filters: number;
+  excluded_count: number;
+  has_more: boolean;
+  filters_applied: Record<string, unknown>;
+  warnings: string[];
+}
+
+export interface ShortlistStats {
+  has_shortlist: boolean;
+  shortlist_id?: string;
+  status?: string;
+  batch_count: number;
+  total_entries: number;
+  by_status: { approved: number; rejected: number; pending: number; on_hold: number };
+  by_tier: Partial<Record<InfluencerTier, number>>;
+  total_budget: number;
+  approved_budget_used: number;
+  budget_remaining: number;
+  is_fully_approved: boolean;
+  can_proceed_to_outreach: boolean;
 }
 
 export interface ContentItem {
@@ -299,6 +448,22 @@ export interface ActionItem {
   createdAt: string;
 }
 
+export interface PendingDocumentApproval {
+  onboarding_id: string;
+  lead_id: string;
+  doc_type: string;
+  status: string;
+  document: OnboardingDocument | null;
+  submitted_at: string;
+  submitted_by: string;
+  generated_by: string;
+  created_at: string;
+  updated_at: string;
+  lead_name: string;
+  lead_email: string;
+  lead_company: string;
+}
+
 export interface ApprovalItem {
   id: string;
   leadId: string;
@@ -308,4 +473,113 @@ export interface ApprovalItem {
   description: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+}
+
+/* ── Creator Profile (full API response) ──────────────── */
+
+export interface IGBioLink {
+  url: string;
+}
+
+export interface IGProfile {
+  username: string;
+  name: string;
+  bio?: string;
+  avatar: string;
+  avatar_hd?: string;
+  is_business?: boolean;
+  is_private?: boolean;
+  posts: number;
+  followers: number;
+  following: number;
+  hearts?: number;
+  language?: string;
+  created_at?: string;
+  external_link?: string;
+  bio_links?: IGBioLink[];
+  pronouns?: string[];
+}
+
+export interface IGMusic {
+  artist_name: string;
+  song_name: string;
+  uses_original_audio?: boolean;
+  audio_id: string;
+}
+
+export interface IGLocation {
+  id: string;
+  name: string;
+  slug: string;
+  has_public_page: boolean;
+}
+
+export interface IGTaggedUser {
+  username: string;
+  name?: string;
+  is_verified?: boolean;
+}
+
+export interface IGCarouselItem {
+  position: number;
+  id: string;
+  type: 'image' | 'video';
+  link: string;
+  width: number;
+  height: number;
+  views?: number;
+}
+
+export interface IGPost {
+  position: number;
+  id: string;
+  permalink: string;
+  type: 'reel' | 'carousel' | 'image';
+  link: string;
+  width: number;
+  height: number;
+  views?: number;
+  has_audio?: boolean;
+  caption?: string;
+  likes: number;
+  comments: number;
+  iso_date: string;
+  thumbnail: string;
+  music?: IGMusic;
+  location?: IGLocation;
+  coauthors?: { username: string }[];
+  tagged_users?: IGTaggedUser[];
+  carousel_items?: IGCarouselItem[];
+}
+
+export interface IGData {
+  profile?: IGProfile;
+  posts?: IGPost[];
+  error?: string;
+}
+
+export interface SearchApiData {
+  instagram?: IGData;
+  tiktok?: IGData;
+}
+
+export interface CreatorInfo {
+  creator_id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  category?: string | null;
+  country?: string | null;
+  language?: string | null;
+  bio?: string | null;
+  profile_image?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatorProfile {
+  success: boolean;
+  message: string;
+  creator: CreatorInfo;
+  searchapi_data: SearchApiData;
 }
