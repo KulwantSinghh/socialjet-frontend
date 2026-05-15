@@ -154,7 +154,7 @@ function LeadCard({
       )}
 
       <div className={styles.cardHeader}>
-        <div className={styles.cardAvatar}>{lead.name.charAt(0).toUpperCase()}</div>
+        <div className={styles.cardAvatar}>{lead.name?.charAt(0).toUpperCase() ?? '?'}</div>
         <div className={styles.cardInfo}>
           <span className={styles.cardName}>{lead.name}</span>
           {lead.company && <span className={styles.cardCompany}>{lead.company}</span>}
