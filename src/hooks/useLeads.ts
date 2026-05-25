@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { leadsService } from '@/services/leads.service';
 import type { LeadsListParams } from '@/types/leads.types';
 
@@ -30,6 +31,10 @@ export function useUpdateLeadStatus() {
       leadsService.updateStatus(leadId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+    },
+    onError: (err: unknown) => {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Failed to update lead status.');
     },
   });
 }

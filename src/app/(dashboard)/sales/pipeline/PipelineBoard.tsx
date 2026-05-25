@@ -283,22 +283,6 @@ function Column({
 }
 
 // ─── Error Toast ─────────────────────────────────────────────────────────────
-function ErrorToast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onDismiss, 4000);
-    return () => clearTimeout(t);
-  }, [onDismiss]);
-
-  return (
-    <div className={styles.errorToast}>
-      <span>⚠ {message}</span>
-      <button className={styles.errorToastClose} onClick={onDismiss}>
-        ✕
-      </button>
-    </div>
-  );
-}
-
 // ─── Board ────────────────────────────────────────────────────────────────────
 export function PipelineBoard() {
   const router = useRouter();
@@ -308,7 +292,6 @@ export function PipelineBoard() {
   const [editMode, setEditMode] = useState(false);
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const serverLeads = data?.leads;
 
@@ -342,20 +325,28 @@ export function PipelineBoard() {
       if (currentColKey === targetColKey) return;
 
       const newStatus = targetCol.dropStatus;
+      const newPipelineStatus = targetCol.pipelineStatuses[0];
 
-      // Optimistic update
+      // Optimistic update — must update both fields because getColKey prefers pipeline_status
       setLocalLeads((prev) =>
-        prev.map((l) => (l.lead_id === leadId ? { ...l, status: newStatus } : l))
+        prev.map((l) =>
+          l.lead_id === leadId ? { ...l, status: newStatus, pipeline_status: newPipelineStatus } : l
+        )
       );
+
+      setDraggingId(null);
 
       try {
         await updateStatus({ leadId, status: newStatus });
       } catch {
-        // Revert on failure
+        // Revert both fields on failure
         setLocalLeads((prev) =>
-          prev.map((l) => (l.lead_id === leadId ? { ...l, status: lead.status } : l))
+          prev.map((l) =>
+            l.lead_id === leadId
+              ? { ...l, status: lead.status, pipeline_status: lead.pipeline_status }
+              : l
+          )
         );
-        setErrorMsg(`Failed to move ${lead.name} — changes reverted.`);
       } finally {
         dragLeadIdRef.current = null;
       }
@@ -378,8 +369,6 @@ export function PipelineBoard() {
 
   return (
     <div className={styles.root}>
-      {errorMsg && <ErrorToast message={errorMsg} onDismiss={() => setErrorMsg(null)} />}
-
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Pipeline</h1>
