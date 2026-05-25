@@ -1,5 +1,6 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
+import { Toaster } from 'sonner';
 import styles from './layout.module.css';
 
 export default function DashboardLayout({
@@ -9,15 +10,15 @@ export default function DashboardLayout({
 }>) {
   return (
     <div className={styles.root}>
-      {/* Sidebar now uses the shared layout component */}
       <Sidebar />
 
       <div className={styles.main}>
-        {/* Topbar now uses the shared layout component */}
         <Topbar />
 
         <main className={styles.content}>{children}</main>
       </div>
+
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

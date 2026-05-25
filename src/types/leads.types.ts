@@ -95,6 +95,8 @@ export interface Lead {
   message?: string;
   meeting_link?: string;
   reschedule_link?: string;
+  flagged?: boolean;
+  flag_reason?: string;
   [key: string]: unknown;
 }
 

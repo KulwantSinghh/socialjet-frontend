@@ -479,6 +479,7 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
   const [analysis, setAnalysis] = useState<SalesAnalysis | null>(null);
   const [callId, setCallId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState<string>('');
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -504,6 +505,7 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
           });
           setCallId(data.call_id);
           setReviewStatus(data.review_status ?? '');
+          setRejectionReason(data.rejection_reason ?? null);
         }
       } catch {
         // No proposal yet — show Generate button
@@ -629,14 +631,14 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
           </p>
           {error && <p className={styles.analysisGenError}>{error}</p>}
         </div>
-        <button
-          className={cn(styles.proposalActionBtn, styles.proposalSendBtn, styles.analysisGenBtn)}
-          disabled={!meeting.has_transcript}
-          onClick={generate}
-          title={!meeting.has_transcript ? 'Transcript needed' : undefined}
-        >
-          <FileIcon /> Generate Proposal
-        </button>
+        {meeting.has_transcript && (
+          <button
+            className={cn(styles.proposalActionBtn, styles.proposalSendBtn, styles.analysisGenBtn)}
+            onClick={generate}
+          >
+            <FileIcon /> Generate Proposal
+          </button>
+        )}
       </div>
     );
   }
@@ -742,11 +744,38 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
         </div>
       ) : (
         /* View mode: WYSIWYG rendered document */
-        <div
-          ref={docRef}
-          className={styles.pdoc}
-          dangerouslySetInnerHTML={{ __html: generateProposalPageHTML(analysis!) }}
-        />
+        <>
+          {rejectionReason && (
+            <div className={styles.rejectionBanner}>
+              <div className={styles.rejectionBannerHeader}>
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>Proposal Rejected — Revision Required</span>
+              </div>
+              <p className={styles.rejectionBannerReason}>{rejectionReason}</p>
+              <p className={styles.rejectionBannerHint}>
+                Edit the proposal and re-submit for approval.
+              </p>
+            </div>
+          )}
+          <div
+            ref={docRef}
+            className={styles.pdoc}
+            dangerouslySetInnerHTML={{ __html: generateProposalPageHTML(analysis!) }}
+          />
+        </>
       )}
     </div>
   );
@@ -1462,6 +1491,28 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
                   </span>
                 )}
               </div>
+
+              {lead.flagged && lead.flag_reason && (
+                <div className={styles.flagAlert}>
+                  <div className={styles.flagAlertHeader}>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  </div>
+                  <p className={styles.flagAlertReason}>{lead.flag_reason}</p>
+                </div>
+              )}
               {meetingsLoading ? (
                 <div className={styles.skeletonList}>
                   {Array.from({ length: 1 }).map((_, i) => (

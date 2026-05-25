@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 import styles from './NewLeadModal.module.css';
 import { useCreateLead } from '@/hooks/useCreateLead';
 import type { CreateLeadRequest } from '@/types/leads.types';
@@ -32,8 +33,6 @@ export interface NewLeadModalProps {
 
 export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) => {
   const [form, setForm] = useState<CreateLeadRequest>(EMPTY_FORM);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const createLead = useCreateLead();
@@ -43,8 +42,6 @@ export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) =>
     if (open) {
       /* eslint-disable react-hooks/set-state-in-effect */
       setForm(EMPTY_FORM);
-      setSuccessMsg('');
-      setErrorMsg('');
       /* eslint-enable react-hooks/set-state-in-effect */
       createLead.reset();
     }
@@ -77,8 +74,6 @@ export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) =>
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
 
     const required: (keyof CreateLeadRequest)[] = [
       'name',
@@ -98,7 +93,7 @@ export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) =>
           notes: 'Notes',
           contact_person: 'Contact Person',
         };
-        setErrorMsg(`${labels[field]} is required.`);
+        toast.error(`${labels[field]} is required.`);
         return;
       }
     }
@@ -115,19 +110,31 @@ export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) =>
 
     createLead.mutate(payload, {
       onSuccess: (data) => {
-        setSuccessMsg(`✓ Lead "${form.name}" created successfully.`);
+        toast.success(`Lead "${form.name}" created successfully.`);
         onSuccess?.(data);
-        setTimeout(() => onClose(), 1500);
+        onClose();
       },
       onError: (err: unknown) => {
-        const e = err as { response?: { data?: { detail?: { msg?: string }[] | string } } };
+        const e = err as {
+          response?: {
+            data?: {
+              detail?: { msg?: string; message?: string }[] | { message?: string } | string;
+            };
+          };
+        };
         const detail = e?.response?.data?.detail;
-        const msg = Array.isArray(detail)
-          ? detail[0]?.msg
-          : typeof detail === 'string'
-            ? detail
-            : 'Failed to create lead. Please try again.';
-        setErrorMsg(msg ?? 'Unexpected error occurred.');
+        let msg: string;
+        if (Array.isArray(detail)) {
+          msg = detail[0]?.msg ?? 'Failed to create lead. Please try again.';
+        } else if (typeof detail === 'string') {
+          msg = detail;
+        } else if (detail && typeof detail === 'object' && 'message' in detail) {
+          msg =
+            (detail as { message?: string }).message ?? 'Failed to create lead. Please try again.';
+        } else {
+          msg = 'Failed to create lead. Please try again.';
+        }
+        toast.error(msg);
       },
     });
   };
@@ -502,10 +509,6 @@ export const NewLeadModal = ({ open, onClose, onSuccess }: NewLeadModalProps) =>
               />
             </div>
           </div>
-
-          {/* Feedback */}
-          {errorMsg && <div className={styles.error}>{errorMsg}</div>}
-          {successMsg && <div className={styles.success}>{successMsg}</div>}
 
           {/* Actions */}
           <div className={styles.actions}>
