@@ -39,7 +39,8 @@ function formatDealValue(val?: string | number): string {
   return `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function capitalize(str: string): string {
+function capitalize(str: string | undefined | null): string {
+  if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
