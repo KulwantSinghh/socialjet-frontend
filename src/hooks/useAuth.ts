@@ -14,11 +14,18 @@ import type {
 export function useLogin() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
+  const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: (payload: LoginRequest) => authService.login(payload),
-    onSuccess: (data) => {
-      setAuth(data.role, data.access_token, data.refresh_token);
+    onSuccess: async (data, variables) => {
+      setAuth(data.role, data.access_token, data.refresh_token, variables.username);
+      try {
+        const me = await authService.getMe();
+        setUser(me);
+      } catch {
+        // non-fatal — name display degrades gracefully
+      }
       const targetPath = getDefaultRouteForRole(data.role as UserRole) || '/sales';
       router.push(targetPath);
     },

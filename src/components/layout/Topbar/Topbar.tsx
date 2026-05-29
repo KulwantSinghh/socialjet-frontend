@@ -163,97 +163,134 @@ const LogoutModal = ({ onCancel, onConfirm }: { onCancel: () => void; onConfirm:
   );
 };
 
+// ---- Under Development Toast ----
+const UnderDevelopmentToast = ({ onClose }: { onClose: () => void }) =>
+  createPortal(
+    <div className={styles.underDevToast}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 2L2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5"
+          stroke="#6C63FF"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span>Under Development</span>
+      <button className={styles.underDevClose} onClick={onClose} aria-label="Close">
+        ×
+      </button>
+    </div>,
+    document.body
+  );
+
 // ---- Profile Dropdown ----
 const ProfileDropdown = ({
   role,
+  fullName,
+  email,
   onSignOutClick,
 }: {
   role: string;
+  fullName: string;
+  email: string;
   onSignOutClick: () => void;
 }) => {
+  const [showUnderDev, setShowUnderDev] = useState(false);
   const displayRole = role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+  const handleUnderDev = () => {
+    setShowUnderDev(true);
+    setTimeout(() => setShowUnderDev(false), 2500);
+  };
+
   return (
-    <div className={styles.dropdown}>
-      {/* User header row */}
-      <div className={styles.dropdownHeader}>
-        <Image
-          src={AVATAR_URL}
-          alt="Sarah J."
-          width={40}
-          height={40}
-          className={styles.dropdownAvatar}
-          unoptimized
-        />
-        <div className={styles.dropdownUserInfo}>
-          <span className={styles.dropdownName}>Sarah J.</span>
-          <span className={styles.dropdownEmail}>Sarah.J@mail.com</span>
+    <>
+      {showUnderDev && <UnderDevelopmentToast onClose={() => setShowUnderDev(false)} />}
+      <div className={styles.dropdown}>
+        {/* User header row */}
+        <div className={styles.dropdownHeader}>
+          <Image
+            src={AVATAR_URL}
+            alt={fullName}
+            width={40}
+            height={40}
+            className={styles.dropdownAvatar}
+            unoptimized
+          />
+          <div className={styles.dropdownUserInfo}>
+            <span className={styles.dropdownName}>{fullName}</span>
+            <span className={styles.dropdownEmail}>{email}</span>
+          </div>
+          <span className={styles.dropdownRoleBadge}>{displayRole}</span>
         </div>
-        <span className={styles.dropdownRoleBadge}>{displayRole}</span>
-      </div>
 
-      <div className={styles.dropdownDivider} />
+        <div className={styles.dropdownDivider} />
 
-      <nav className={styles.dropdownMenu}>
-        <button className={styles.dropdownItem}>
+        <nav className={styles.dropdownMenu}>
+          <button className={styles.dropdownItem} onClick={handleUnderDev}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M4 20c0-4 3.582-7 8-7s8 3 8 7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M19 8a2 2 0 1 1 4 0 2 2 0 0 1-4 0M17 10a4 4 0 0 1 4-4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            Profile Settings
+          </button>
+          <button className={styles.dropdownItem} onClick={handleUnderDev}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M12 16v-4M12 8h.01"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            Help Center
+          </button>
+          <button className={styles.dropdownItem}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Dark Mode
+          </button>
+        </nav>
+
+        <div className={styles.dropdownDivider} />
+
+        <button
+          className={cn(styles.dropdownItem, styles.dropdownSignOut)}
+          onClick={onSignOutClick}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" />
             <path
-              d="M4 20c0-4 3.582-7 8-7s8 3 8 7"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M19 8a2 2 0 1 1 4 0 2 2 0 0 1-4 0M17 10a4 4 0 0 1 4-4"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-          Profile Settings
-        </button>
-        <button className={styles.dropdownItem}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
-            <path
-              d="M12 16v-4M12 8h.01"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-          Help Center
-        </button>
-        <button className={styles.dropdownItem}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+              d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
               stroke="currentColor"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
-          Dark Mode
+          Sign Out
         </button>
-      </nav>
-
-      <div className={styles.dropdownDivider} />
-
-      <button className={cn(styles.dropdownItem, styles.dropdownSignOut)} onClick={onSignOutClick}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        Sign Out
-      </button>
-    </div>
+      </div>
+    </>
   );
 };
 
@@ -326,7 +363,10 @@ const NotificationsDropdown = ({ alerts }: { alerts: LeadAlert[] }) => {
 // ---- Main Topbar ----
 export const Topbar = () => {
   const router = useRouter();
-  const { role, logout } = useAuthStore();
+  const { role, logout, user, username } = useAuthStore();
+  const fullName =
+    (user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : '') || username || 'User';
+  const userEmail = user?.email ?? '';
   const { data: alertsData } = useLeadAlerts();
   const hasUnread = useAlertsStore((s) => s.hasUnread());
   const pendingMeetingRequests = usePendingMeetingRequestsCount();
@@ -425,7 +465,7 @@ export const Topbar = () => {
                   unoptimized
                 />
                 <div className={styles.profileMeta}>
-                  <span className={styles.profileName}>Sarah J.</span>
+                  <span className={styles.profileName}>{fullName}</span>
                   <span className={styles.profileRole}>{displayRole}</span>
                 </div>
                 <ChevronIcon open={dropdownOpen} />
@@ -434,6 +474,8 @@ export const Topbar = () => {
               {dropdownOpen && (
                 <ProfileDropdown
                   role={role ?? 'user'}
+                  fullName={fullName}
+                  email={userEmail}
                   onSignOutClick={() => {
                     setDropdownOpen(false);
                     setLogoutModalOpen(true);

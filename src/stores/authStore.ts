@@ -11,9 +11,10 @@ interface AuthState {
   user: User | null;
   token: string | null;
   role: string | null;
+  username: string | null;
   isAuthenticated: boolean;
 
-  setAuth: (role: string, token: string, refreshToken?: string) => void;
+  setAuth: (role: string, token: string, refreshToken?: string, username?: string) => void;
   setUser: (user: User) => void;
   logout: () => void;
 }
@@ -29,9 +30,10 @@ export const useAuthStore = create<AuthState>()(
         user: null,
         token: null,
         role: null,
+        username: null,
         isAuthenticated: false,
 
-        setAuth: (role: string, token: string, refreshToken?: string) => {
+        setAuth: (role: string, token: string, refreshToken?: string, username?: string) => {
           const normalizedRole = normalizeRole(role);
           if (typeof window !== 'undefined') {
             localStorage.setItem(AUTH_TOKEN_KEY, token);
@@ -40,7 +42,12 @@ export const useAuthStore = create<AuthState>()(
             }
             writeAuthSessionCookies(token, normalizedRole);
           }
-          set({ role: normalizedRole, token, isAuthenticated: true });
+          set({
+            role: normalizedRole,
+            token,
+            isAuthenticated: true,
+            ...(username ? { username } : {}),
+          });
         },
 
         setUser: (user: User) => {
@@ -54,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
             localStorage.removeItem(REFRESH_TOKEN_KEY);
             clearAuthSessionCookies();
           }
-          set({ user: null, token: null, role: null, isAuthenticated: false });
+          set({ user: null, token: null, role: null, username: null, isAuthenticated: false });
           const persistApi = (api as AuthStoreWithPersist).persist;
           persistApi?.clearStorage();
         },
@@ -65,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
           token: state.token,
           user: state.user,
           role: state.role,
+          username: state.username,
           isAuthenticated: state.isAuthenticated,
         }),
         onRehydrateStorage: () => (state, error) => {
