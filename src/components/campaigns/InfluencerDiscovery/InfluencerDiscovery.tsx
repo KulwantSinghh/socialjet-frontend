@@ -483,7 +483,9 @@ function RecommendationCard({
         </div>
         <div className={styles.statCell}>
           <span className={styles.statVal}>
-            {creator.engagement_rate != null ? `${creator.engagement_rate.toFixed(1)}%` : '—'}
+            {creator.engagement_rate != null
+              ? `${Number(creator.engagement_rate).toFixed(1)}%`
+              : '—'}
           </span>
           <span className={styles.statLbl}>Eng. Rate</span>
         </div>
@@ -926,7 +928,6 @@ export function InfluencerDiscovery({ leadId }: { leadId: string }) {
   const { data: stats } = useShortlistStats(leadId, shortlistEnabled);
 
   const entries = shortlistData?.entries ?? [];
-  const hasShortlist = entries.length > 0;
 
   function handleApprove(entryId: string) {
     updateEntry({ entryId, status: 'approved' });
@@ -968,12 +969,6 @@ export function InfluencerDiscovery({ leadId }: { leadId: string }) {
           onClick={() => setTab('discover')}
         >
           Discovery
-        </button>
-        <button
-          className={`${styles.tab} ${tab === 'shortlist' ? styles.tabActive : ''}`}
-          onClick={() => setTab('shortlist')}
-        >
-          Shortlist {hasShortlist && <span className={styles.tabBadge}>{entries.length}</span>}
         </button>
       </div>
 

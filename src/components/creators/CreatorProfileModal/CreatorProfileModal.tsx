@@ -253,11 +253,12 @@ function PostLightbox({
               playsInline
             />
           ) : (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={proxyImg(mediaUrl) ?? mediaUrl}
               alt={post.caption ?? ''}
               className={styles.lightboxImage}
-            /> // eslint-disable-line @next/next/no-img-element
+            />
           )}
 
           {/* carousel nav inside media */}

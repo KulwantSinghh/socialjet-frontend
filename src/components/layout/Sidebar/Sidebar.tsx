@@ -575,10 +575,15 @@ export const Sidebar = () => {
           if (item.type === 'link') {
             // Lead detail pages (/sales/leads/[id]) highlight Pipeline
             const isLeadDetail = /^\/sales\/leads\/[^/]+/.test(pathname);
+            const isCampaignLeadDetail = /^\/campaigns\/leads\/[^/]+/.test(pathname);
             const isActive = isLeadDetail
               ? item.path === '/sales/pipeline'
-              : pathname === item.path ||
-                (item.path !== '/sales' && pathname.startsWith(item.path + '/'));
+              : isCampaignLeadDetail
+                ? item.path === '/campaigns/leads'
+                : pathname === item.path ||
+                  (item.path !== '/sales' &&
+                    item.path !== '/campaigns' &&
+                    pathname.startsWith(item.path + '/'));
             return (
               <Link
                 key={item.path || item.label}
