@@ -1,6 +1,8 @@
+// next.config.ts
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone', // for aws amplify
   images: {
     remotePatterns: [
       {
