@@ -1,7 +1,10 @@
 .root {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /* Fill the viewport minus the dashboard topbar and the .content padding,
+     so the timeline and content columns scroll independently instead of the
+     whole document scrolling (which carried the timeline away with it). */
+  height: calc(100vh - var(--topbar-height) - (var(--space-6) * 2));
   overflow: hidden;
 }
 

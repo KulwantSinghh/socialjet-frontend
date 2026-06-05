@@ -279,6 +279,22 @@ export function useRejectItem() {
 
 // ── Recommendations hooks ─────────────────────────────────────────────────────
 
+export interface RecommendationInstagramPost {
+  position: number;
+  id: string;
+  permalink: string;
+  type: 'image' | 'carousel' | 'reel' | string;
+  link: string;
+  thumbnail: string;
+  caption?: string;
+  likes?: number;
+  comments?: number;
+  views?: number;
+  iso_date?: string;
+  width?: number;
+  height?: number;
+}
+
 export interface RecommendationCreator {
   creator_id: string;
   name: string;
@@ -300,9 +316,29 @@ export interface RecommendationCreator {
     tier?: number;
     followers?: number;
     location?: number;
+    semantic?: number;
   };
   selection_reason: string;
   status: 'accepted' | 'rejected' | 'pending' | null;
+  profile_picture?: string | null;
+  bio?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  rate?: string | null;
+  external_link?: string | null;
+  gender?: string | null;
+  age?: number | null;
+  is_verified?: boolean;
+  is_business?: boolean;
+  searchapi_data?: {
+    instagram?: {
+      profile?: {
+        bio_links?: { url: string }[];
+        external_link?: string;
+      };
+      posts?: RecommendationInstagramPost[];
+    };
+  };
 }
 
 export interface RecommendationsResponse {
@@ -322,6 +358,14 @@ export interface RecommendationsResponse {
     min_engagement_rate: number;
     preferred_tier: string;
     additional_notes: string;
+    audience_age_range?: string;
+    audience_country?: string;
+    locations?: string[];
+    min_followers?: number;
+    num_creators_needed?: number;
+    can_visit_location?: boolean;
+    is_comedic?: boolean;
+    is_presentable?: boolean;
   };
   matched_creators: RecommendationCreator[];
   total_matched: number;

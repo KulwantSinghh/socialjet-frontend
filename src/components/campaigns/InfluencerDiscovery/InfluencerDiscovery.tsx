@@ -13,7 +13,11 @@ import {
   useRecommendations,
   useRecommendationDecision,
 } from '@/hooks/useCampaignLeads';
-import type { RecommendationCreator } from '@/hooks/useCampaignLeads';
+import type {
+  RecommendationCreator,
+  RecommendationInstagramPost,
+  RecommendationsResponse,
+} from '@/hooks/useCampaignLeads';
 import type {
   ShortlistEntry,
   DiscoveryFilters,
@@ -390,6 +394,607 @@ function StatsSidebar({ campaignId, enabled }: { campaignId: string; enabled: bo
   );
 }
 
+// ── Circular score rings ─────────────────────────────────────────────────────
+
+function ringColor(val: number, max: number): string {
+  const pct = val / max;
+  if (pct >= 0.6) return '#10b981';
+  if (pct >= 0.3) return '#f59e0b';
+  return '#94a3b8';
+}
+
+function ScoreRing({
+  label,
+  value,
+  max,
+  size = 52,
+  stroke = 4,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  size?: number;
+  stroke?: number;
+}) {
+  const [animated, setAnimated] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setAnimated(true), 80);
+    return () => clearTimeout(t);
+  }, []);
+
+  const r = (size - stroke * 2) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(1, value / max);
+  const offset = animated ? circ * (1 - pct) : circ;
+  const color = ringColor(value, max);
+  const cx = size / 2;
+
+  return (
+    <div className={styles.scoreRingItem} title={`${label}: ${value}`}>
+      <svg
+        width={size}
+        height={size}
+        style={{ display: 'block', filter: `drop-shadow(0 0 6px ${color}55)` }}
+      >
+        {/* track */}
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth={stroke} />
+        {/* fill */}
+        <circle
+          cx={cx}
+          cy={cx}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${cx} ${cx})`}
+          style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1)' }}
+        />
+        <text
+          x={cx}
+          y={cx}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={size > 56 ? 13 : 11}
+          fontWeight="700"
+          fill={color}
+        >
+          {value % 1 === 0 ? value : value.toFixed(1)}
+        </text>
+      </svg>
+      <span className={styles.scoreRingLabel}>{label.replace(/_/g, ' ')}</span>
+    </div>
+  );
+}
+
+function ScoreBurst({
+  scoreEntries,
+  totalScore,
+  selectionReason,
+}: {
+  scoreEntries: [string, number][];
+  totalScore: number;
+  selectionReason?: string;
+}) {
+  const maxTotal = 100;
+  const sorted = [...scoreEntries].sort(([, a], [, b]) => b - a);
+  const maxVal = Math.max(...scoreEntries.map(([, v]) => v), 1);
+
+  return (
+    <div className={styles.scoreBurst}>
+      {/* Total score — large ring */}
+      <div className={styles.scoreBurstTotal}>
+        <ScoreRing label="Total" value={totalScore} max={maxTotal} size={72} stroke={5} />
+      </div>
+      {/* Per-dimension rings */}
+      <div className={styles.scoreBurstGrid}>
+        {sorted.map(([key, val]) => (
+          <ScoreRing key={key} label={key} value={val} max={maxVal} size={52} stroke={4} />
+        ))}
+      </div>
+      {selectionReason && <p className={styles.modalSelectionReason}>{selectionReason}</p>}
+    </div>
+  );
+}
+
+// ── Post cell (image + inline video for reels) ───────────────────────────────
+
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function PostCell({ post, isReel }: { post: RecommendationInstagramPost; isReel: boolean }) {
+  const [playing, setPlaying] = React.useState(false);
+  const [paused, setPaused] = React.useState(false);
+  const [muted, setMuted] = React.useState(true);
+  const [failed, setFailed] = React.useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  // Build two source URLs — browser tries them in order natively via <source> elements
+  const proxySrc = post.link ? `/api/proxy-video?url=${encodeURIComponent(post.link)}` : null;
+  const isVideoPost = post.type === 'reel';
+  const hasStats = post.likes != null || post.views != null || post.comments != null;
+
+  function handlePlay() {
+    setFailed(false);
+    setPlaying(true);
+    setPaused(false);
+  }
+
+  function handleToggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play();
+      setPaused(false);
+    } else {
+      v.pause();
+      setPaused(true);
+    }
+  }
+
+  function handleMuteToggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+  }
+
+  // All <source> elements errored — video is truly unavailable (expired URL etc.)
+  function handleVideoError() {
+    setPlaying(false);
+    setFailed(true);
+  }
+
+  return (
+    <div className={`${styles.postThumb} ${isReel ? styles.postThumbReel : ''}`}>
+      {/* ── media ── */}
+      {isVideoPost && playing ? (
+        <video
+          ref={videoRef}
+          className={styles.postThumbImg}
+          loop
+          playsInline
+          autoPlay
+          muted={muted}
+          onError={handleVideoError}
+          onClick={handleToggle}
+          style={{ cursor: 'pointer', background: '#000' }}
+        >
+          {/* Browser tries direct CDN first (instant), proxy second (server-side) */}
+          {post.link && <source src={post.link} type="video/mp4" />}
+          {proxySrc && <source src={proxySrc} type="video/mp4" />}
+        </video>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/proxy-image?url=${encodeURIComponent(post.thumbnail)}`}
+          alt={post.caption?.slice(0, 40) ?? 'post'}
+          className={styles.postThumbImg}
+          loading="lazy"
+        />
+      )}
+
+      {/* play button — shown when not playing */}
+      {isVideoPost && !playing && (
+        <button
+          className={styles.reelPlayBtn}
+          onClick={failed ? undefined : handlePlay}
+          aria-label="Play reel"
+          style={failed ? { cursor: 'default' } : undefined}
+        >
+          {failed ? (
+            <span className={styles.reelExpiredLabel}>
+              Link
+              <br />
+              expired
+            </span>
+          ) : (
+            <span className={styles.reelPlayCircle}>
+              <svg viewBox="0 0 24 24" fill="white" width="22" height="22">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* controls while playing */}
+      {isVideoPost && playing && (
+        <div className={styles.reelControls}>
+          <button
+            className={styles.reelControlBtn}
+            onClick={handleToggle}
+            aria-label={paused ? 'Play' : 'Pause'}
+          >
+            {paused ? (
+              <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
+            )}
+          </button>
+          <button
+            className={styles.reelControlBtn}
+            onClick={handleMuteToggle}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+          >
+            {muted ? (
+              <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* type badge */}
+      {!playing && post.type === 'reel' && <span className={styles.postTypeIcon}>▶</span>}
+      {!playing && post.type === 'carousel' && <span className={styles.postTypeIcon}>⧉</span>}
+
+      {/* always-visible stats */}
+      {hasStats && (
+        <div className={styles.postStatsBar}>
+          {post.likes != null && (
+            <span className={styles.postStat}>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+              {fmtNum(post.likes)}
+            </span>
+          )}
+          {post.views != null && (
+            <span className={styles.postStat}>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              {fmtNum(post.views)}
+            </span>
+          )}
+          {post.comments != null && (
+            <span className={styles.postStat}>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              {fmtNum(post.comments)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* caption on hover */}
+      {post.caption && !playing && (
+        <div className={styles.postCaption}>
+          {post.caption.slice(0, 80)}
+          {post.caption.length > 80 ? '…' : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Creator detail modal ─────────────────────────────────────────────────────
+function proxyUrl(url: string): string {
+  return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+}
+
+function CreatorDetailModal({
+  creator,
+  onClose,
+  onDecision,
+  decision,
+  isPending,
+}: {
+  creator: RecommendationCreator;
+  onClose: () => void;
+  onDecision?: (creatorId: string, decision: 'accepted' | 'rejected') => void;
+  decision?: 'accepted' | 'rejected';
+  isPending?: boolean;
+}) {
+  const color = avatarColor(creator.name);
+  const [imgError, setImgError] = React.useState(false);
+  const tierColor = TIER_COLOR[(creator.tier as InfluencerTier) ?? 'nano'] ?? '#888';
+  const allPosts = creator.searchapi_data?.instagram?.posts ?? [];
+  const reels = allPosts.filter((p) => p.type === 'reel');
+  const [activeTab, setActiveTab] = React.useState<'posts' | 'reels'>('posts');
+  const displayedPosts = activeTab === 'reels' ? reels : allPosts;
+
+  const bioLinks = creator.searchapi_data?.instagram?.profile?.bio_links ?? [];
+  const externalLink =
+    creator.external_link ?? creator.searchapi_data?.instagram?.profile?.external_link;
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const scoreEntries = (Object.entries(creator.score_breakdown) as [string, unknown][]).filter(
+    ([, v]) => typeof v === 'number' && (v as number) > 0
+  ) as [string, number][];
+
+  return (
+    <div
+      className={styles.modalBackdrop}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className={styles.modalBox}>
+        <button className={styles.modalClose} onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+
+        {/* ── Profile header ── */}
+        <div className={styles.modalProfileHeader}>
+          <div className={styles.modalAvatarRing}>
+            <div className={styles.modalAvatarRingInner}>
+              {creator.profile_picture && !imgError ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={proxyUrl(creator.profile_picture)}
+                  alt={creator.name}
+                  className={styles.modalAvatarImg}
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <div
+                  className={styles.modalAvatarFallback}
+                  style={{ '--c': color } as React.CSSProperties}
+                >
+                  {getInitials(creator.name)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.modalProfileMeta}>
+            <div className={styles.modalUsernameRow}>
+              <span className={styles.modalUsername}>{creator.name}</span>
+              {creator.is_verified && <span className={styles.verifiedBadge}>✔</span>}
+              <span
+                className={styles.modalTierBadge}
+                style={{ color: tierColor, borderColor: tierColor }}
+              >
+                {creator.tier.replace('_', ' ')}
+              </span>
+              {creator.instagram_handle && (
+                <span className={styles.igSourceBadge} title="Data from Instagram">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    width="14"
+                    height="14"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <rect width="24" height="24" rx="6" fill="url(#ig-grad)" />
+                    <circle cx="12" cy="12" r="4" stroke="white" strokeWidth="1.6" fill="none" />
+                    <circle cx="17.5" cy="6.5" r="1.2" fill="white" />
+                    <defs>
+                      <linearGradient id="ig-grad" x1="0" y1="24" x2="24" y2="0">
+                        <stop offset="0%" stopColor="#f09433" />
+                        <stop offset="35%" stopColor="#e6683c" />
+                        <stop offset="60%" stopColor="#dc2743" />
+                        <stop offset="80%" stopColor="#cc2366" />
+                        <stop offset="100%" stopColor="#bc1888" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  Instagram
+                </span>
+              )}
+            </div>
+
+            <div className={styles.modalHandles}>
+              {creator.instagram_handle && (
+                <a
+                  className={styles.modalIgHandle}
+                  href={`https://instagram.com/${creator.instagram_handle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  @{creator.instagram_handle}
+                </a>
+              )}
+              {creator.tiktok_handle && (
+                <a
+                  className={styles.modalTtHandle}
+                  href={`https://tiktok.com/@${creator.tiktok_handle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  @{creator.tiktok_handle}
+                </a>
+              )}
+            </div>
+
+            {creator.bio && <p className={styles.modalBio}>{creator.bio}</p>}
+
+            {(externalLink || bioLinks.length > 0) && (
+              <div className={styles.modalLinks}>
+                {externalLink && (
+                  <a
+                    className={styles.modalLink}
+                    href={externalLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    🔗 {externalLink.replace(/^https?:\/\//, '')}
+                  </a>
+                )}
+                {bioLinks
+                  .filter((l) => l.url !== externalLink)
+                  .map((l, i) => (
+                    <a
+                      key={i}
+                      className={styles.modalLink}
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      🔗 {l.url.replace(/^https?:\/\//, '')}
+                    </a>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Score rings top-right ── */}
+          {scoreEntries.length > 0 && (
+            <div className={styles.headerScorePanel}>
+              <ScoreBurst
+                scoreEntries={scoreEntries}
+                totalScore={creator.recommendation_score}
+                selectionReason={creator.selection_reason}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ── IG-style stats bar ── */}
+        <div className={styles.modalIgStats}>
+          <div className={styles.modalIgStat}>
+            <span className={styles.modalIgStatVal}>
+              {formatFollowers(creator.instagram_followers ?? undefined)}
+            </span>
+            <span className={styles.modalIgStatLbl}>IG Followers</span>
+          </div>
+          <div className={styles.modalIgStat}>
+            <span className={styles.modalIgStatVal}>
+              {formatFollowers(creator.tiktok_followers ?? undefined)}
+            </span>
+            <span className={styles.modalIgStatLbl}>TT Followers</span>
+          </div>
+          <div className={styles.modalIgStat}>
+            <span className={styles.modalIgStatVal}>
+              {creator.engagement_rate != null
+                ? `${Number(creator.engagement_rate).toFixed(1)}%`
+                : '—'}
+            </span>
+            <span className={styles.modalIgStatLbl}>Eng. Rate</span>
+          </div>
+          {creator.age && (
+            <div className={styles.modalIgStat}>
+              <span className={styles.modalIgStatVal}>{creator.age}</span>
+              <span className={styles.modalIgStatLbl}>Age</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── Info chips ── */}
+        <div className={styles.modalChipsRow}>
+          {creator.country && <span className={styles.modalChip}>📍 {creator.country}</span>}
+          {(creator.languages?.length ?? 0) > 0 && (
+            <span className={styles.modalChip}>🌐 {creator.languages!.join(', ')}</span>
+          )}
+          {(creator.niches?.length ?? 0) > 0 &&
+            creator.niches!.map((n, i) => (
+              <span key={i} className={styles.modalChip}>
+                {n}
+              </span>
+            ))}
+          {creator.gender && <span className={styles.modalChip}>{creator.gender}</span>}
+          {creator.is_business && <span className={styles.modalChip}>🏢 Business</span>}
+        </div>
+
+        {/* ── Contact info ── */}
+        {(creator.email || creator.phone || creator.rate) && (
+          <div className={styles.modalContactSection}>
+            <p className={styles.modalSectionLabel}>Contact & Rate</p>
+            <div className={styles.modalContactRow}>
+              {creator.email && <span className={styles.modalContact}>✉️ {creator.email}</span>}
+              {creator.phone && <span className={styles.modalContact}>📞 {creator.phone}</span>}
+              {creator.rate && <span className={styles.modalContact}>💰 {creator.rate}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* ── Posts grid ── */}
+        {allPosts.length > 0 && (
+          <div className={styles.modalPostsSection}>
+            <div className={styles.postsTabRow}>
+              <button
+                className={`${styles.postsTab} ${activeTab === 'posts' ? styles.postsTabActive : ''}`}
+                onClick={() => setActiveTab('posts')}
+              >
+                ⊞ Posts ({allPosts.length})
+              </button>
+              {reels.length > 0 && (
+                <button
+                  className={`${styles.postsTab} ${activeTab === 'reels' ? styles.postsTabActive : ''}`}
+                  onClick={() => setActiveTab('reels')}
+                >
+                  ▶ Reels ({reels.length})
+                </button>
+              )}
+            </div>
+            <div className={activeTab === 'reels' ? styles.reelsGrid : styles.postsGrid}>
+              {displayedPosts.slice(0, activeTab === 'reels' ? 9 : 12).map((post) => (
+                <PostCell key={post.id} post={post} isReel={activeTab === 'reels'} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Sticky accept / reject bar ── */}
+        {onDecision && (
+          <div className={styles.modalActionBar}>
+            {decision === 'accepted' ? (
+              <div className={styles.modalDecisionBadge} data-decision="accepted">
+                ✓ Accepted
+              </div>
+            ) : decision === 'rejected' ? (
+              <div className={styles.modalDecisionBadge} data-decision="rejected">
+                ✕ Rejected
+              </div>
+            ) : (
+              <>
+                <button
+                  className={`${styles.modalActionBtn} ${styles.modalActionAccept}`}
+                  onClick={() => {
+                    onDecision(creator.creator_id, 'accepted');
+                    onClose();
+                  }}
+                  disabled={isPending}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  </svg>
+                  Accept Creator
+                </button>
+                <button
+                  className={`${styles.modalActionBtn} ${styles.modalActionReject}`}
+                  onClick={() => {
+                    onDecision(creator.creator_id, 'rejected');
+                    onClose();
+                  }}
+                  disabled={isPending}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                  </svg>
+                  Reject
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Recommendation card ───────────────────────────────────────────────────────
 function RecommendationCard({
   creator,
@@ -402,145 +1007,352 @@ function RecommendationCard({
   onDecision: (creatorId: string, decision: 'accepted' | 'rejected') => void;
   isPending: boolean;
 }) {
-  const [expanded, setExpanded] = React.useState(false);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [imgError, setImgError] = React.useState(false);
   const color = avatarColor(creator.name);
 
   return (
-    <div
-      className={`${styles.recCard} ${decision === 'accepted' ? styles.recCardAccepted : decision === 'rejected' ? styles.recCardRejected : ''}`}
-    >
-      <div className={styles.cardTop}>
-        <div className={styles.cardAvatar} style={{ '--c': color } as React.CSSProperties}>
-          {getInitials(creator.name)}
-        </div>
-        <div className={styles.cardIdentity}>
-          <span className={styles.cardName}>{creator.name}</span>
-          <div className={styles.cardHandles}>
-            {creator.instagram_handle && (
-              <a
-                className={styles.handleIG}
-                href={`https://instagram.com/${creator.instagram_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                @{creator.instagram_handle}
-              </a>
-            )}
-            {creator.tiktok_handle && (
-              <a
-                className={styles.handleTT}
-                href={`https://tiktok.com/@${creator.tiktok_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                @{creator.tiktok_handle}
-              </a>
+    <>
+      <div
+        className={`${styles.recCard} ${decision === 'accepted' ? styles.recCardAccepted : decision === 'rejected' ? styles.recCardRejected : ''}`}
+      >
+        <div className={styles.cardTop}>
+          <div className={styles.cardAvatar} style={{ '--c': color } as React.CSSProperties}>
+            {creator.profile_picture && !imgError ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={proxyUrl(creator.profile_picture)}
+                alt={creator.name}
+                className={styles.cardAvatarImg}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              getInitials(creator.name)
             )}
           </div>
-        </div>
-        <div className={styles.cardRight}>
-          <div
-            className={styles.scoreRing}
-            style={
-              {
-                '--pct': `${Math.round(creator.recommendation_score)}%`,
-                '--tier': TIER_COLOR[(creator.tier as InfluencerTier) ?? 'nano'] ?? '#888',
-              } as React.CSSProperties
-            }
-          >
-            <span className={styles.scoreValue}>{creator.recommendation_score.toFixed(1)}</span>
+          <div className={styles.cardIdentity}>
+            <span className={styles.cardName}>{creator.name}</span>
+            <div className={styles.cardHandles}>
+              {creator.instagram_handle && (
+                <a
+                  className={styles.handleIG}
+                  href={`https://instagram.com/${creator.instagram_handle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  @{creator.instagram_handle}
+                </a>
+              )}
+              {creator.tiktok_handle && (
+                <a
+                  className={styles.handleTT}
+                  href={`https://tiktok.com/@${creator.tiktok_handle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  @{creator.tiktok_handle}
+                </a>
+              )}
+            </div>
           </div>
-          <span
-            className={styles.tier}
-            style={{
-              color: TIER_COLOR[creator.tier as InfluencerTier] ?? '#888',
-            }}
-          >
-            {creator.tier.replace('_', ' ')}
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.cardMeta}>
-        {creator.country && <span className={styles.metaChip}>📍 {creator.country}</span>}
-        {(creator.languages?.length ?? 0) > 0 && (
-          <span className={styles.metaChip}>🌐 {creator.languages!.join(', ')}</span>
-        )}
-      </div>
-
-      <div className={styles.cardStats}>
-        <div className={styles.statCell}>
-          <span className={styles.statVal}>
-            {formatFollowers(creator.instagram_followers ?? undefined)}
-          </span>
-          <span className={styles.statLbl}>IG Followers</span>
-        </div>
-        <div className={styles.statCell}>
-          <span className={styles.statVal}>
-            {formatFollowers(creator.tiktok_followers ?? undefined)}
-          </span>
-          <span className={styles.statLbl}>TT Followers</span>
-        </div>
-        <div className={styles.statCell}>
-          <span className={styles.statVal}>
-            {creator.engagement_rate != null
-              ? `${Number(creator.engagement_rate).toFixed(1)}%`
-              : '—'}
-          </span>
-          <span className={styles.statLbl}>Eng. Rate</span>
-        </div>
-      </div>
-
-      {(creator.niches?.length ?? 0) > 0 && (
-        <div className={styles.nicheRow}>
-          {creator.niches!.slice(0, 4).map((n, i) => (
-            <span key={i} className={styles.nicheTag}>
-              {n}
+          <div className={styles.cardRight}>
+            <div
+              className={styles.scoreRing}
+              style={
+                {
+                  '--pct': `${Math.round(creator.recommendation_score)}%`,
+                  '--tier': TIER_COLOR[(creator.tier as InfluencerTier) ?? 'nano'] ?? '#888',
+                } as React.CSSProperties
+              }
+            >
+              <span className={styles.scoreValue}>{creator.recommendation_score.toFixed(1)}</span>
+            </div>
+            <span
+              className={styles.tier}
+              style={{
+                color: TIER_COLOR[creator.tier as InfluencerTier] ?? '#888',
+              }}
+            >
+              {creator.tier.replace('_', ' ')}
             </span>
-          ))}
-        </div>
-      )}
-
-      <button className={styles.reasoningToggle} onClick={() => setExpanded((p) => !p)}>
-        {expanded ? '▲ Hide AI Reasoning' : '▼ Show AI Reasoning'}
-      </button>
-
-      {expanded && (
-        <div className={styles.reasoning}>
-          <p className={styles.reasoningText}>{creator.selection_reason}</p>
-          <div className={styles.scoreBars}>
-            <ScoreBar label="Niche" value={creator.score_breakdown.niche} />
-            <ScoreBar label="Engagement" value={creator.score_breakdown.engagement} />
-            <ScoreBar label="Completeness" value={creator.score_breakdown.completeness} />
           </div>
         </div>
-      )}
 
-      {decision === 'accepted' && <div className={styles.acceptedBadge}>✓ Accepted</div>}
+        <div className={styles.cardMeta}>
+          {creator.country && <span className={styles.metaChip}>📍 {creator.country}</span>}
+          {(creator.languages?.length ?? 0) > 0 && (
+            <span className={styles.metaChip}>🌐 {creator.languages!.join(', ')}</span>
+          )}
+        </div>
 
-      {!decision && (
+        <div className={styles.cardStats}>
+          <div className={styles.statCell}>
+            <span className={styles.statVal}>
+              {formatFollowers(creator.instagram_followers ?? undefined)}
+            </span>
+            <span className={styles.statLbl}>IG Followers</span>
+          </div>
+          <div className={styles.statCell}>
+            <span className={styles.statVal}>
+              {formatFollowers(creator.tiktok_followers ?? undefined)}
+            </span>
+            <span className={styles.statLbl}>TT Followers</span>
+          </div>
+          <div className={styles.statCell}>
+            <span className={styles.statVal}>
+              {creator.engagement_rate != null
+                ? `${Number(creator.engagement_rate).toFixed(1)}%`
+                : '—'}
+            </span>
+            <span className={styles.statLbl}>Eng. Rate</span>
+          </div>
+        </div>
+
+        {(creator.niches?.length ?? 0) > 0 && (
+          <div className={styles.nicheRow}>
+            {creator.niches!.slice(0, 4).map((n, i) => (
+              <span key={i} className={styles.nicheTag}>
+                {n}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* AI score rings — always visible */}
+        <div className={styles.cardScoreRings}>
+          {(() => {
+            const sb = creator.score_breakdown;
+            const max = Math.max(sb.niche, sb.engagement, sb.completeness, 1);
+            return (
+              <>
+                <ScoreRing label="Niche" value={sb.niche} max={max} size={46} stroke={4} />
+                <ScoreRing
+                  label="Engagement"
+                  value={sb.engagement}
+                  max={max}
+                  size={46}
+                  stroke={4}
+                />
+                <ScoreRing
+                  label="Completeness"
+                  value={sb.completeness}
+                  max={max}
+                  size={46}
+                  stroke={4}
+                />
+              </>
+            );
+          })()}
+        </div>
+
+        {decision === 'accepted' && <div className={styles.acceptedBadge}>✓ Accepted</div>}
+        {decision === 'rejected' && <div className={styles.rejectedBadge}>✕ Rejected</div>}
+
         <div className={styles.cardActions}>
+          {!decision && (
+            <div className={styles.cardActionsRow}>
+              <button
+                className={`${styles.btn} ${styles.btnApprove}`}
+                onClick={() => onDecision(creator.creator_id, 'accepted')}
+                disabled={isPending}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                </svg>
+                Accept
+              </button>
+              <button
+                className={`${styles.btn} ${styles.btnReject}`}
+                onClick={() => onDecision(creator.creator_id, 'rejected')}
+                disabled={isPending}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                </svg>
+                Reject
+              </button>
+            </div>
+          )}
           <button
-            className={`${styles.btn} ${styles.btnApprove}`}
-            onClick={() => onDecision(creator.creator_id, 'accepted')}
-            disabled={isPending}
+            className={`${styles.btn} ${styles.btnGhost} ${styles.btnFullWidth}`}
+            onClick={() => setModalOpen(true)}
           >
-            ✓ Accept
-          </button>
-          <button
-            className={`${styles.btn} ${styles.btnReject}`}
-            onClick={() => onDecision(creator.creator_id, 'rejected')}
-            disabled={isPending}
-          >
-            ✕ Reject
+            View Profile
           </button>
         </div>
+      </div>
+
+      {modalOpen && (
+        <CreatorDetailModal
+          creator={creator}
+          onClose={() => setModalOpen(false)}
+          onDecision={onDecision}
+          decision={decision}
+          isPending={isPending}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Recommendations section ───────────────────────────────────────────────────
+// ── Campaign brief (sticky requirements bar) ─────────────────────────────────
+type ExtractedRequirements = RecommendationsResponse['extracted_requirements'];
+
+function titleCase(s: string): string {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function BriefField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className={styles.briefField}>
+      <span className={styles.briefFieldLabel}>{label}</span>
+      <span className={styles.briefFieldValue}>{children}</span>
+    </div>
+  );
+}
+
+function CampaignBrief({ req }: { req: ExtractedRequirements }) {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [notesExpanded, setNotesExpanded] = React.useState(false);
+
+  const locationLabel =
+    req.audience_country ||
+    (req.locations && req.locations.length > 0 ? req.locations.map(titleCase).join(', ') : null);
+
+  const audienceBits = [
+    locationLabel,
+    req.audience_age_range ? `${req.audience_age_range} yrs` : null,
+    req.min_followers ? `${formatFollowers(req.min_followers)}+ followers` : null,
+    req.min_engagement_rate > 0 ? `${req.min_engagement_rate}% min eng.` : null,
+  ].filter(Boolean) as string[];
+
+  const NOTES_PREVIEW = 160;
+  const notes = req.additional_notes ?? '';
+  const notesIsLong = notes.length > NOTES_PREVIEW;
+
+  return (
+    <div className={styles.brief}>
+      {/* Header */}
+      <div className={styles.briefHeader}>
+        <span className={styles.briefTitle}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+          </svg>
+          Campaign Brief
+        </span>
+        <button className={styles.briefToggle} onClick={() => setCollapsed((c) => !c)}>
+          {collapsed ? 'Expand ▾' : 'Collapse ▴'}
+        </button>
+      </div>
+
+      {/* Collapsed: single-line summary */}
+      {collapsed ? (
+        <div className={styles.briefSummary}>
+          {titleCase(req.campaign_objective)} · {titleCase(req.preferred_tier)}
+          {req.num_creators_needed ? ` · ${req.num_creators_needed} creators` : ''}
+          {locationLabel ? ` · ${locationLabel}` : ''}
+          {req.niches?.length ? ` · ${req.niches.join(', ')}` : ''}
+        </div>
+      ) : (
+        <>
+          {/* Core fields */}
+          <div className={styles.briefGrid}>
+            <BriefField label="Objective">{titleCase(req.campaign_objective)}</BriefField>
+            <BriefField label="Preferred Tier">{titleCase(req.preferred_tier)}</BriefField>
+            {req.num_creators_needed != null && (
+              <BriefField label="Creators Needed">{req.num_creators_needed}</BriefField>
+            )}
+            {req.platforms?.length > 0 && (
+              <BriefField label="Platforms">
+                <span className={styles.briefChips}>
+                  {req.platforms.map((p) => (
+                    <span key={p} className={styles.briefChipSolid}>
+                      {titleCase(p)}
+                    </span>
+                  ))}
+                </span>
+              </BriefField>
+            )}
+          </div>
+
+          {/* Audience targeting */}
+          {audienceBits.length > 0 && (
+            <BriefField label="Audience">
+              <span className={styles.briefChips}>
+                {audienceBits.map((b) => (
+                  <span key={b} className={styles.briefChip}>
+                    {b}
+                  </span>
+                ))}
+              </span>
+            </BriefField>
+          )}
+
+          {/* Niches */}
+          {req.niches?.length > 0 && (
+            <BriefField label="Niches">
+              <span className={styles.briefChips}>
+                {req.niches.map((n) => (
+                  <span key={n} className={styles.briefChipNiche}>
+                    {n}
+                  </span>
+                ))}
+              </span>
+            </BriefField>
+          )}
+
+          {/* Brand style */}
+          {req.brand_style?.length > 0 && (
+            <BriefField label="Brand Style">
+              <span className={styles.briefChips}>
+                {req.brand_style.map((s) => (
+                  <span key={s} className={styles.briefChipStyle}>
+                    {s}
+                  </span>
+                ))}
+              </span>
+            </BriefField>
+          )}
+
+          {/* Constraints / flags */}
+          <div className={styles.briefFlags}>
+            {req.can_visit_location && (
+              <span className={`${styles.briefFlag} ${styles.briefFlagYes}`}>
+                ✓ Must visit location
+              </span>
+            )}
+            {req.is_comedic && <span className={styles.briefFlag}>😄 Comedic tone</span>}
+            {req.is_presentable && (
+              <span className={styles.briefFlag}>✨ Presentable on-camera</span>
+            )}
+          </div>
+
+          {/* Notes — truncated with read more */}
+          {notes && (
+            <div className={styles.briefNotes}>
+              <span className={styles.briefFieldLabel}>Campaign Notes</span>
+              <p className={styles.briefNotesText}>
+                {notesExpanded || !notesIsLong
+                  ? notes
+                  : `${notes.slice(0, NOTES_PREVIEW).trimEnd()}… `}
+                {notesIsLong && (
+                  <button
+                    className={styles.briefReadMore}
+                    onClick={() => setNotesExpanded((e) => !e)}
+                  >
+                    {notesExpanded ? 'Show less' : 'Read more'}
+                  </button>
+                )}
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-// ── Recommendations section ───────────────────────────────────────────────────
 function RecommendationsSection({ leadId }: { leadId: string }) {
   const { data, isLoading, error, refetch } = useRecommendations(leadId);
   const { mutate: decide, isPending } = useRecommendationDecision(leadId);
@@ -582,28 +1394,9 @@ function RecommendationsSection({ leadId }: { leadId: string }) {
       </div>
 
       {req && (
-        <div className={styles.recReqRow}>
-          {req.platforms?.map((p) => (
-            <span key={p} className={`${styles.chip} ${styles.chipActive}`}>
-              {p}
-            </span>
-          ))}
-          {req.niches?.map((n) => (
-            <span key={n} className={styles.nicheTag}>
-              {n}
-            </span>
-          ))}
-          {req.min_engagement_rate > 0 && (
-            <span className={styles.metaChip}>Min Eng: {req.min_engagement_rate}%</span>
-          )}
+        <div className={styles.briefSticky}>
+          <CampaignBrief req={req} />
         </div>
-      )}
-
-      {req?.additional_notes && (
-        <details className={styles.recNotes}>
-          <summary className={styles.reasoningToggle}>▼ Campaign Notes</summary>
-          <p className={styles.reasoningText}>{req.additional_notes}</p>
-        </details>
       )}
 
       <div className={styles.creatorGrid}>

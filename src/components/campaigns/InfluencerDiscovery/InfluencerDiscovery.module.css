@@ -88,7 +88,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  overflow: hidden;
+  /* overflow must stay `visible` so the sticky Campaign Brief can pin to the
+     page scroll container (.contentCol). min-width:0 handles flex shrinking. */
+  overflow: visible;
 }
 
 /* ── Form ───────────────────────────────────────────── */
@@ -572,7 +574,24 @@
 /* Card actions */
 .cardActions {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cardActionsRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── AI score rings on the card ── */
+.cardScoreRings {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--color-bg-secondary);
+  border-radius: 12px;
+  padding: 12px 8px 10px;
 }
 
 .rejectionReason {
@@ -584,19 +603,25 @@
 
 /* ── Buttons ────────────────────────────────────────── */
 .btn {
-  height: 34px;
-  padding: 0 16px;
-  border-radius: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
   font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   border: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  white-space: nowrap;
   transition:
     background 0.15s,
     opacity 0.15s;
+}
+
+.btnFullWidth {
+  width: 100%;
 }
 
 .btn:disabled {
@@ -1008,19 +1033,188 @@
   color: var(--color-text-tertiary);
 }
 
-.recReqRow {
+/* ── Campaign Brief (sticky) ── */
+.briefSticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  /* opaque backdrop so creator cards don't show through while pinned */
+  background: var(--color-bg-primary);
+  padding-bottom: 8px;
+}
+
+.brief {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.briefHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.briefTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.briefTitle svg {
+  color: var(--color-primary-600);
+}
+
+.briefToggle {
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.briefToggle:hover {
+  text-decoration: underline;
+}
+
+.briefSummary {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.briefGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.briefField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.briefFieldLabel {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.briefFieldValue {
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.briefChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.briefChipSolid {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: #fff;
+  background: var(--color-primary-600);
+  border-radius: 999px;
+  padding: 2px 10px;
+  text-transform: capitalize;
+}
+
+.briefChip {
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.briefChipNiche {
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  border-radius: 999px;
+  padding: 2px 10px;
+  text-transform: capitalize;
+}
+
+.briefChipStyle {
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: #7c3aed;
+  background: color-mix(in srgb, #7c3aed 8%, transparent);
+  border: 1px solid color-mix(in srgb, #7c3aed 20%, transparent);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.briefFlags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  align-items: center;
 }
 
-.recNotes {
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  font-size: var(--text-sm);
+.briefFlag {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 3px 10px;
+}
+
+.briefFlagYes {
+  color: #059669;
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+.briefNotes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--color-border-default);
+  padding-top: 10px;
+}
+
+.briefNotesText {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.briefReadMore {
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.briefReadMore:hover {
+  text-decoration: underline;
 }
 
 /* ── Recommendation card (reuses creatorCard styles) ── */
@@ -1062,4 +1256,739 @@
   background: #dcfce7;
   border-radius: var(--radius-md);
   border: 1px solid #86efac;
+}
+
+.rejectedBadge {
+  text-align: center;
+  padding: 10px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: #dc2626;
+  background: #fee2e2;
+  border-radius: var(--radius-md);
+  border: 1px solid #fca5a5;
+}
+
+/* ── Card avatar image ───────────────────────────────── */
+.cardAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ── Creator detail modal ────────────────────────────── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modalBox {
+  background: var(--color-bg-primary);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+}
+
+/* scrollbar styling */
+.modalBox::-webkit-scrollbar {
+  width: 4px;
+}
+.modalBox::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modalBox::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 4px;
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 2;
+  transition: background 0.15s;
+}
+.modalClose:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* ── Modal profile header ── */
+.modalProfileHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+/* Instagram gradient ring */
+.modalAvatarRing {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}
+
+.modalAvatarRingInner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--color-bg-primary);
+  padding: 3px;
+}
+
+.modalAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.modalAvatarFallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c, #6366f1) 16%, transparent);
+  color: var(--c, #6366f1);
+  font-size: 26px;
+  font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalProfileMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.modalUsernameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modalUsername {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.verifiedBadge {
+  color: #3b82f6;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.modalTierBadge {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1.5px solid;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.modalHandles {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.modalIgHandle {
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: #e1306c;
+  text-decoration: none;
+}
+.modalIgHandle:hover {
+  text-decoration: underline;
+}
+
+.modalTtHandle {
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.modalTtHandle:hover {
+  text-decoration: underline;
+}
+
+.modalBio {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  margin: 10px 0 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.modalLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.modalLink {
+  font-size: 12px;
+  color: #00376b;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.modalLink:hover {
+  text-decoration: underline;
+}
+
+/* ── Modal IG-style stats bar ── */
+.modalIgStats {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-default);
+  padding: 16px 28px;
+  gap: 0;
+}
+
+.modalIgStat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.modalIgStat + .modalIgStat::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10%;
+  height: 80%;
+  width: 1px;
+  background: var(--color-border-default);
+}
+
+.modalIgStatVal {
+  font-size: 17px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.modalIgStatLbl {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Extra info chips row ── */
+.modalChipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.modalChip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+/* ── Contact row ── */
+.modalContactSection {
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.modalSectionLabel {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 10px;
+}
+
+.modalContactRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modalContact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-default);
+}
+
+/* ── Score rings in header ── */
+.headerScorePanel {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.scoreBurst {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.scoreBurstTotal {
+  display: flex;
+  justify-content: center;
+}
+
+.scoreBurstGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  gap: 6px;
+  justify-items: center;
+}
+
+.scoreRingItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: default;
+}
+
+.scoreRingLabel {
+  font-size: 9px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: capitalize;
+  text-align: center;
+  max-width: 64px;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.modalSelectionReason {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  background: var(--color-bg-secondary);
+  border-radius: 10px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--color-primary-500);
+}
+
+/* ── IG source badge ── */
+.igSourceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: #c13584;
+  background: color-mix(in srgb, #c13584 8%, transparent);
+  border: 1px solid color-mix(in srgb, #c13584 20%, transparent);
+  border-radius: 999px;
+  padding: 2px 9px 2px 5px;
+}
+
+/* ── Posts grid (Instagram-style) ── */
+.modalPostsSection {
+  padding: 16px 28px 28px;
+}
+
+.postsTabRow {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-default);
+  margin-bottom: 12px;
+  gap: 0;
+}
+
+.postsTab {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.postsTabActive {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-text-primary);
+}
+
+.postsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+/* Reels grid — 3 columns, 9:16 aspect */
+.reelsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.postThumb {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+  cursor: default;
+}
+
+/* Reels cells — 9:16 portrait */
+.postThumbReel {
+  aspect-ratio: 9 / 16;
+}
+
+.postThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.postThumb:hover .postThumbImg {
+  transform: scale(1.04);
+}
+
+/* Type icon — top-right corner */
+.postTypeIcon {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  line-height: 1;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* Hover overlay — centered stats */
+.postOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.postThumb:hover .postOverlay {
+  opacity: 1;
+}
+
+/* ── Reel play/pause buttons ── */
+.reelPlayBtn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.28);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+.reelPlayBtn:hover {
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.reelPlayBtnDisabled {
+  cursor: default;
+}
+.reelPlayBtnDisabled:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.reelPlayCircle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.reelPlayBtn:hover .reelPlayCircle {
+  transform: scale(1.08);
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.reelPauseBtn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 2;
+}
+
+/* Inline reel controls row (pause + mute) */
+.reelControls {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  display: flex;
+  gap: 5px;
+  z-index: 2;
+}
+
+.reelControlBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.58);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
+}
+.reelControlBtn:hover {
+  background: rgba(0, 0, 0, 0.78);
+}
+
+/* "Link expired" label inside play-button area */
+.reelExpiredLabel {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0 6px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Always-visible stats bar ── */
+.postStatsBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  padding: 18px 7px 7px;
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.postStat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Modal sticky action bar ── */
+.modalActionBar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 10px;
+  padding: 14px 24px;
+  background: var(--color-bg-primary);
+  border-top: 1px solid var(--color-border-default);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+  z-index: 3;
+}
+
+.modalActionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  border: none;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
+}
+.modalActionBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.modalActionBtn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.modalActionAccept {
+  background: #10b981;
+  color: #fff;
+}
+.modalActionAccept:not(:disabled):hover {
+  background: #059669;
+}
+
+.modalActionReject {
+  background: #fff0f0;
+  color: #ef4444;
+  border: 1.5px solid #fca5a5;
+  flex: 0 0 auto;
+  padding: 0 24px;
+}
+.modalActionReject:not(:disabled):hover {
+  background: #fee2e2;
+}
+
+.modalDecisionBadge {
+  flex: 1;
+  text-align: center;
+  height: 44px;
+  line-height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+}
+.modalDecisionBadge[data-decision='accepted'] {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1.5px solid #86efac;
+}
+.modalDecisionBadge[data-decision='rejected'] {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1.5px solid #fca5a5;
+}
+
+/* Caption tooltip — slides up on hover */
+.postCaption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 20px 8px 8px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  pointer-events: none;
+}
+
+.postThumb:hover .postCaption {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.postOverlayStat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.postOverlayIcon {
+  font-size: 16px;
 }

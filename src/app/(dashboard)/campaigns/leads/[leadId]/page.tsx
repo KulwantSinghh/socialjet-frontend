@@ -27,7 +27,8 @@ export default function LeadDetailPage({ params }: Props) {
 
   const currentStage: CampaignLeadStage = lead?.stage ?? 'unassigned';
 
-  // When a stage is "completed", auto-advance the panel to the next actionable stage
+  // The API stage is the last COMPLETED stage — auto-advance the panel to the
+  // next actionable stage so the CM lands on what they need to do next.
   const NEXT_STAGE: Partial<Record<CampaignLeadStage, CampaignLeadStage>> = {
     unassigned: 'assigned',
     assigned: 'questionnaire_sent',
@@ -38,15 +39,33 @@ export default function LeadDetailPage({ params }: Props) {
     documents_generated: 'documents_cm_approved',
     documents_cm_approved: 'documents_admin_approved',
     documents_admin_approved: 'documents_sent_to_client',
+    documents_sent_to_client: 'influencer_selection',
+    influencer_selection: 'influencer_cm_approved',
+    influencer_cm_approved: 'influencer_client_approved',
+    influencer_client_approved: 'deal_negotiation',
+    deal_negotiation: 'deal_closed',
+    deal_closed: 'client_informed',
+    client_informed: 'content_review',
+    content_review: 'content_cm_approved',
+    content_cm_approved: 'content_client_approved',
+    content_client_approved: 'publish_date_assigned',
+    publish_date_assigned: 'live',
+    live: 'complete',
   };
-  const defaultActive = NEXT_STAGE[currentStage] ?? currentStage;
+  const nextStageOf = (stage: CampaignLeadStage): CampaignLeadStage => NEXT_STAGE[stage] ?? stage;
 
-  const [activeStage, setActiveStage] = useState<CampaignLeadStage>(defaultActive);
+  // `activeStage` is the panel the user is viewing. It starts at the next
+  // actionable stage and re-syncs whenever the lead's real stage changes
+  // (e.g. on refresh or after an action advances the stage). User clicks override it.
+  const [activeStage, setActiveStage] = useState<CampaignLeadStage | null>(null);
+  const [syncedStage, setSyncedStage] = useState<CampaignLeadStage | null>(null);
 
-  // Sync activeStage when lead data first loads (only while still on default)
-  if (lead && activeStage === defaultActive && currentStage !== lead.stage) {
-    setActiveStage(NEXT_STAGE[lead.stage] ?? lead.stage);
+  if (lead && lead.stage !== syncedStage) {
+    setSyncedStage(lead.stage);
+    setActiveStage(nextStageOf(lead.stage));
   }
+
+  const effectiveActiveStage = activeStage ?? nextStageOf(currentStage);
 
   function getInitials(name: string) {
     return name
@@ -142,7 +161,7 @@ export default function LeadDetailPage({ params }: Props) {
         <div className={styles.timelineCol}>
           <LeadTimeline
             currentStage={currentStage}
-            activeStage={activeStage}
+            activeStage={effectiveActiveStage}
             onSelectStage={setActiveStage}
           />
         </div>
@@ -150,7 +169,7 @@ export default function LeadDetailPage({ params }: Props) {
         {/* Stage content (right) */}
         <div className={styles.contentCol}>
           <div className={styles.contentInner}>
-            <StagePanel leadId={leadId} activeStage={activeStage} />
+            <StagePanel leadId={leadId} activeStage={effectiveActiveStage} />
           </div>
         </div>
       </div>

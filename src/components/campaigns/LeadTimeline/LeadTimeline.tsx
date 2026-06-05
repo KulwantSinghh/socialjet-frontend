@@ -36,14 +36,16 @@ const STAGES: TimelineStage[] = [
 
 const STAGE_ORDER = STAGES.map((s) => s.key);
 
+// The lead's `currentStage` (from the API) represents the LAST COMPLETED stage —
+// so it and everything before it are complete, and the NEXT stage is the active one.
 function stageStatus(
   currentStage: CampaignLeadStage,
   itemStage: CampaignLeadStage
 ): 'complete' | 'active' | 'pending' {
   const currentIdx = STAGE_ORDER.indexOf(currentStage);
   const itemIdx = STAGE_ORDER.indexOf(itemStage);
-  if (itemIdx < currentIdx) return 'complete';
-  if (itemIdx === currentIdx) return 'active';
+  if (itemIdx <= currentIdx) return 'complete';
+  if (itemIdx === currentIdx + 1) return 'active';
   return 'pending';
 }
 
