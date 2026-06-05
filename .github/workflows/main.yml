@@ -49,41 +49,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Wait for any running Amplify job to finish
+      - name: Get latest Amplify job (auto-triggered by push)
+        id: get_job
         run: |
-          echo "Checking for pending/running jobs..."
-          for i in $(seq 1 30); do
-            STATUS=$(aws amplify list-jobs \
-              --app-id ${{ env.AMPLIFY_APP_ID }} \
-              --branch-name ${{ env.AMPLIFY_BRANCH }} \
-              --max-items 1 \
-              --query 'jobSummaries[0].status' \
-              --output text)
-            echo "[$i/30] Current job status: $STATUS"
-            if [ "$STATUS" = "RUNNING" ] || [ "$STATUS" = "PENDING" ] || [ "$STATUS" = "PROVISIONING" ]; then
-              echo "Job in progress, waiting 20s..."
-              sleep 20
-            else
-              echo "No active job, proceeding..."
-              break
-            fi
-          done
-
-      - name: Trigger Amplify deployment
-        id: start_job
-        run: |
-          JOB_ID=$(aws amplify start-job \
+          echo "Waiting for Amplify to pick up the push (10s)..."
+          sleep 10
+          JOB_ID=$(aws amplify list-jobs \
             --app-id ${{ env.AMPLIFY_APP_ID }} \
             --branch-name ${{ env.AMPLIFY_BRANCH }} \
-            --job-type RELEASE \
-            --query 'jobSummary.jobId' \
+            --max-items 1 \
+            --query 'jobSummaries[0].jobId' \
             --output text)
           echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
-          echo "Started Amplify job: $JOB_ID"
+          echo "Tracking Amplify job: $JOB_ID"
 
       - name: Wait for deployment to complete
         run: |
-          JOB_ID=${{ steps.start_job.outputs.job_id }}
+          JOB_ID=${{ steps.get_job.outputs.job_id }}
           echo "Polling job $JOB_ID every 20s (max 10 min)..."
 
           for i in $(seq 1 30); do
