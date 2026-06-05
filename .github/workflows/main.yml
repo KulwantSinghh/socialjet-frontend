@@ -49,34 +49,29 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Wait for Amplify to pick up the push and get job ID
+      - name: Wait for Amplify job and track it
         id: get_job
         run: |
           echo "Waiting for Amplify to start a job..."
           for i in $(seq 1 20); do
-            JOB_ID=$(aws amplify list-jobs \
+            RESULT=$(aws amplify list-jobs \
               --app-id ${{ env.AMPLIFY_APP_ID }} \
               --branch-name ${{ env.AMPLIFY_BRANCH }} \
               --max-items 1 \
-              --query 'jobSummaries[0].jobId' \
-              --output text)
+              --output json)
 
-            STATUS=$(aws amplify list-jobs \
-              --app-id ${{ env.AMPLIFY_APP_ID }} \
-              --branch-name ${{ env.AMPLIFY_BRANCH }} \
-              --max-items 1 \
-              --query 'jobSummaries[0].status' \
-              --output text)
+            JOB_ID=$(echo $RESULT | python3 -c "import sys,json; jobs=json.load(sys.stdin)['jobSummaries']; print(jobs[0]['jobId']) if jobs else print('')")
+            STATUS=$(echo $RESULT | python3 -c "import sys,json; jobs=json.load(sys.stdin)['jobSummaries']; print(jobs[0]['status']) if jobs else print('')")
 
             echo "[$i/20] Job ID: $JOB_ID | Status: $STATUS"
 
             if [ "$STATUS" = "RUNNING" ] || [ "$STATUS" = "PENDING" ] || [ "$STATUS" = "PROVISIONING" ]; then
               echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
-              echo "Got job ID: $JOB_ID"
+              echo "Tracking job: $JOB_ID"
               exit 0
             fi
 
-            echo "Not started yet, retrying in 15s..."
+            echo "Not active yet, retrying in 15s..."
             sleep 15
           done
 
@@ -89,12 +84,13 @@ jobs:
           echo "Polling job $JOB_ID every 20s (max 10 min)..."
 
           for i in $(seq 1 30); do
-            STATUS=$(aws amplify get-job \
+            RESULT=$(aws amplify get-job \
               --app-id ${{ env.AMPLIFY_APP_ID }} \
               --branch-name ${{ env.AMPLIFY_BRANCH }} \
               --job-id "$JOB_ID" \
-              --query 'job.summary.status' \
-              --output text)
+              --output json)
+
+            STATUS=$(echo $RESULT | python3 -c "import sys,json; print(json.load(sys.stdin)['job']['summary']['status'])")
 
             echo "[$i/30] Status: $STATUS"
 
