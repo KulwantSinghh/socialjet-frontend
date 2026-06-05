@@ -1,0 +1,91 @@
+name: Deploy to AWS Amplify
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ap-southeast-1
+  AMPLIFY_APP_ID: d3st4niiqrtke1
+  AMPLIFY_BRANCH: main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Trigger Amplify deployment
+        id: start_job
+        run: |
+          JOB_ID=$(aws amplify start-job \
+            --app-id ${{ env.AMPLIFY_APP_ID }} \
+            --branch-name ${{ env.AMPLIFY_BRANCH }} \
+            --job-type RELEASE \
+            --query 'jobSummary.jobId' \
+            --output text)
+          echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
+          echo "Started Amplify job: $JOB_ID"
+
+      - name: Wait for deployment to complete
+        run: |
+          JOB_ID=${{ steps.start_job.outputs.job_id }}
+          echo "Polling job $JOB_ID every 20s (max 10 min)..."
+
+          for i in $(seq 1 30); do
+            STATUS=$(aws amplify get-job \
+              --app-id ${{ env.AMPLIFY_APP_ID }} \
+              --branch-name ${{ env.AMPLIFY_BRANCH }} \
+              --job-id "$JOB_ID" \
+              --query 'job.summary.status' \
+              --output text)
+
+            echo "[$i/30] Status: $STATUS"
+
+            if [ "$STATUS" = "SUCCEED" ]; then
+              echo "✅ Deployment succeeded!"
+              exit 0
+            elif [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "CANCELLED" ]; then
+              echo "❌ Deployment ended with status: $STATUS"
+              exit 1
+            fi
+
+            sleep 20
+          done
+
+          echo "⏱️ Timed out after 10 minutes"
+          exit 1
