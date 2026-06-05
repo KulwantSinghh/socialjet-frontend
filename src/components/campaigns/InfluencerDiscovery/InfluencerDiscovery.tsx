@@ -405,17 +405,20 @@ function ringColor(val: number, max: number): string {
 
 function ScoreRing({
   label,
-  value,
-  max,
+  value: rawValue,
+  max: rawMax,
   size = 52,
   stroke = 4,
 }: {
   label: string;
-  value: number;
+  value: number | null | undefined;
   max: number;
   size?: number;
   stroke?: number;
 }) {
+  const value = Number.isFinite(rawValue) ? (rawValue as number) : 0;
+  const max = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 1;
+
   const [animated, setAnimated] = React.useState(false);
   React.useEffect(() => {
     const t = setTimeout(() => setAnimated(true), 80);
@@ -1122,7 +1125,7 @@ function RecommendationCard({
         <div className={styles.cardScoreRings}>
           {(() => {
             const sb = creator.score_breakdown;
-            const max = Math.max(sb.niche, sb.engagement, sb.completeness, 1);
+            const max = Math.max(sb.niche || 0, sb.engagement || 0, sb.completeness || 0, 1);
             return (
               <>
                 <ScoreRing label="Niche" value={sb.niche} max={max} size={46} stroke={4} />

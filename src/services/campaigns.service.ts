@@ -34,6 +34,7 @@ const STAGE_NORMALIZE: Record<string, CampaignLeadStage> = {
   cm_approved: 'documents_cm_approved',
   admin_approved: 'documents_admin_approved',
   sent_to_client: 'documents_sent_to_client',
+  client_approved: 'influencer_client_approved',
 };
 
 function normalizeStage(stage: string): CampaignLeadStage {
