@@ -49,6 +49,26 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Wait for any running Amplify job to finish
+        run: |
+          echo "Checking for pending/running jobs..."
+          for i in $(seq 1 30); do
+            STATUS=$(aws amplify list-jobs \
+              --app-id ${{ env.AMPLIFY_APP_ID }} \
+              --branch-name ${{ env.AMPLIFY_BRANCH }} \
+              --max-items 1 \
+              --query 'jobSummaries[0].status' \
+              --output text)
+            echo "[$i/30] Current job status: $STATUS"
+            if [ "$STATUS" = "RUNNING" ] || [ "$STATUS" = "PENDING" ] || [ "$STATUS" = "PROVISIONING" ]; then
+              echo "Job in progress, waiting 20s..."
+              sleep 20
+            else
+              echo "No active job, proceeding..."
+              break
+            fi
+          done
+
       - name: Trigger Amplify deployment
         id: start_job
         run: |
