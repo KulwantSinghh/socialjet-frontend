@@ -681,6 +681,14 @@
   background: var(--color-bg-secondary);
 }
 
+.btnConversation {
+  background: var(--color-primary-600);
+  color: #fff;
+}
+.btnConversation:hover:not(:disabled) {
+  background: var(--color-primary-700);
+}
+
 .btnDanger {
   background: #ef4444;
   color: #fff;

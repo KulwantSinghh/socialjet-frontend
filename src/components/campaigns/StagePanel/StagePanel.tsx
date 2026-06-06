@@ -2488,7 +2488,7 @@ export function StagePanel({ leadId, activeStage }: Props) {
       case 'documents':
         return <DocumentsStage leadId={leadId} />;
       case 'influencer':
-        return <InfluencerDiscovery leadId={leadId} />;
+        return <InfluencerDiscovery leadId={leadId} activeStage={activeStage} />;
       case 'deal':
         return <DealStage leadId={leadId} />;
       case 'content':

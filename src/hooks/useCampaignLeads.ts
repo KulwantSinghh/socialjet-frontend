@@ -385,6 +385,66 @@ export function useRecommendations(leadId: string) {
   });
 }
 
+// ── Client-approved creators hook ─────────────────────────────────────────────
+
+export interface ClientApprovedProfile {
+  creator_id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  niche?: string | null;
+  bio?: string | null;
+  profile_image?: string | null;
+  rate?: string | null;
+  location?: string | null;
+  instagram_handle?: string | null;
+  instagram_followers?: number | null;
+  instagram_following?: number | null;
+  instagram_posts?: number | null;
+  instagram_engagement_rate?: number | null;
+  tiktok_handle?: string | null;
+  tiktok_followers?: number | null;
+  youtube_url?: string | null;
+  follower_count?: number | null;
+  engagement_rate?: number | null;
+  is_verified?: boolean;
+  is_business?: boolean;
+  searchapi_data?: RecommendationCreator['searchapi_data'];
+}
+
+export interface ClientApprovedCreator {
+  assignment_id: string;
+  creator_id: string;
+  status: string;
+  source: string;
+  added_at: string;
+  client_decision_at: string | null;
+  deal_status: string | null;
+  deal_amount: number | null;
+  profile: ClientApprovedProfile;
+}
+
+export interface ClientApprovedResponse {
+  lead_id: string;
+  brand_name: string;
+  creators: ClientApprovedCreator[];
+  total: number;
+}
+
+export function useClientApprovedCreators(leadId: string) {
+  return useQuery<ClientApprovedResponse>({
+    queryKey: ['client-approved-creators', leadId],
+    queryFn: async () => {
+      const res = await apiClient.get<ClientApprovedResponse>(
+        ENDPOINTS.CAMPAIGN_INFLUENCERS.CLIENT_APPROVED(leadId)
+      );
+      return res.data;
+    },
+    staleTime: 30_000,
+    enabled: !!leadId,
+  });
+}
+
 export function useRecommendationDecision(leadId: string) {
   const qc = useQueryClient();
   return useMutation({

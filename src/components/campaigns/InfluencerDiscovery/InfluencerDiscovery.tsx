@@ -12,17 +12,20 @@ import {
   useBudgetPreview,
   useRecommendations,
   useRecommendationDecision,
+  useClientApprovedCreators,
 } from '@/hooks/useCampaignLeads';
 import type {
   RecommendationCreator,
   RecommendationInstagramPost,
   RecommendationsResponse,
+  ClientApprovedCreator,
 } from '@/hooks/useCampaignLeads';
 import type {
   ShortlistEntry,
   DiscoveryFilters,
   DiscoveryObjective,
   InfluencerTier,
+  CampaignLeadStage,
 } from '@/types/campaign.types';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -517,6 +520,22 @@ function PostCell({ post, isReel }: { post: RecommendationInstagramPost; isReel:
   const [failed, setFailed] = React.useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
 
+  // Pause the media element before React removes it. A playing <video> performs
+  // async DOM work; if it's torn down mid-commit (e.g. the modal closes or the
+  // stage switches while a reel plays) the browser can desync from React's tree
+  // and throw "Cannot read properties of null (reading 'removeChild')".
+  React.useEffect(() => {
+    if (!playing) return;
+    const v = videoRef.current;
+    return () => {
+      try {
+        v?.pause();
+      } catch {
+        /* element already detached */
+      }
+    };
+  }, [playing]);
+
   // Build two source URLs — browser tries them in order natively via <source> elements
   const proxySrc = post.link ? `/api/proxy-video?url=${encodeURIComponent(post.link)}` : null;
   const isVideoPost = post.type === 'reel';
@@ -560,6 +579,7 @@ function PostCell({ post, isReel }: { post: RecommendationInstagramPost; isReel:
       {/* ── media ── */}
       {isVideoPost && playing ? (
         <video
+          key="reel-video"
           ref={videoRef}
           className={styles.postThumbImg}
           loop
@@ -577,6 +597,7 @@ function PostCell({ post, isReel }: { post: RecommendationInstagramPost; isReel:
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          key="reel-img"
           src={`/api/proxy-image?url=${encodeURIComponent(post.thumbnail)}`}
           alt={post.caption?.slice(0, 40) ?? 'post'}
           className={styles.postThumbImg}
@@ -1003,12 +1024,16 @@ function RecommendationCard({
   creator,
   decision,
   onDecision,
-  isPending,
+  isPending = false,
+  showScores = true,
+  onSeeConversation,
 }: {
   creator: RecommendationCreator;
   decision?: 'accepted' | 'rejected';
-  onDecision: (creatorId: string, decision: 'accepted' | 'rejected') => void;
-  isPending: boolean;
+  onDecision?: (creatorId: string, decision: 'accepted' | 'rejected') => void;
+  isPending?: boolean;
+  showScores?: boolean;
+  onSeeConversation?: (creatorId: string) => void;
 }) {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [imgError, setImgError] = React.useState(false);
@@ -1059,17 +1084,19 @@ function RecommendationCard({
             </div>
           </div>
           <div className={styles.cardRight}>
-            <div
-              className={styles.scoreRing}
-              style={
-                {
-                  '--pct': `${Math.round(creator.recommendation_score)}%`,
-                  '--tier': TIER_COLOR[(creator.tier as InfluencerTier) ?? 'nano'] ?? '#888',
-                } as React.CSSProperties
-              }
-            >
-              <span className={styles.scoreValue}>{creator.recommendation_score.toFixed(1)}</span>
-            </div>
+            {showScores && (
+              <div
+                className={styles.scoreRing}
+                style={
+                  {
+                    '--pct': `${Math.round(creator.recommendation_score)}%`,
+                    '--tier': TIER_COLOR[(creator.tier as InfluencerTier) ?? 'nano'] ?? '#888',
+                  } as React.CSSProperties
+                }
+              >
+                <span className={styles.scoreValue}>{creator.recommendation_score.toFixed(1)}</span>
+              </div>
+            )}
             <span
               className={styles.tier}
               style={{
@@ -1122,37 +1149,39 @@ function RecommendationCard({
         )}
 
         {/* AI score rings — always visible */}
-        <div className={styles.cardScoreRings}>
-          {(() => {
-            const sb = creator.score_breakdown;
-            const max = Math.max(sb.niche || 0, sb.engagement || 0, sb.completeness || 0, 1);
-            return (
-              <>
-                <ScoreRing label="Niche" value={sb.niche} max={max} size={46} stroke={4} />
-                <ScoreRing
-                  label="Engagement"
-                  value={sb.engagement}
-                  max={max}
-                  size={46}
-                  stroke={4}
-                />
-                <ScoreRing
-                  label="Completeness"
-                  value={sb.completeness}
-                  max={max}
-                  size={46}
-                  stroke={4}
-                />
-              </>
-            );
-          })()}
-        </div>
+        {showScores && (
+          <div className={styles.cardScoreRings}>
+            {(() => {
+              const sb = creator.score_breakdown;
+              const max = Math.max(sb.niche || 0, sb.engagement || 0, sb.completeness || 0, 1);
+              return (
+                <>
+                  <ScoreRing label="Niche" value={sb.niche} max={max} size={46} stroke={4} />
+                  <ScoreRing
+                    label="Engagement"
+                    value={sb.engagement}
+                    max={max}
+                    size={46}
+                    stroke={4}
+                  />
+                  <ScoreRing
+                    label="Completeness"
+                    value={sb.completeness}
+                    max={max}
+                    size={46}
+                    stroke={4}
+                  />
+                </>
+              );
+            })()}
+          </div>
+        )}
 
         {decision === 'accepted' && <div className={styles.acceptedBadge}>✓ Accepted</div>}
         {decision === 'rejected' && <div className={styles.rejectedBadge}>✕ Rejected</div>}
 
         <div className={styles.cardActions}>
-          {!decision && (
+          {onDecision && !decision && (
             <div className={styles.cardActionsRow}>
               <button
                 className={`${styles.btn} ${styles.btnApprove}`}
@@ -1182,6 +1211,17 @@ function RecommendationCard({
           >
             View Profile
           </button>
+          {onSeeConversation && (
+            <button
+              className={`${styles.btn} ${styles.btnConversation} ${styles.btnFullWidth}`}
+              onClick={() => onSeeConversation(creator.creator_id)}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              See Conversation
+            </button>
+          )}
         </div>
       </div>
 
@@ -1413,6 +1453,113 @@ function RecommendationsSection({ leadId }: { leadId: string }) {
             }
             onDecision={handleDecision}
             isPending={isPending}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Client-approved section ───────────────────────────────────────────────────
+
+function tierFromFollowers(followers: number | null | undefined): InfluencerTier {
+  const n = followers ?? 0;
+  if (n >= 1_000_000) return 'mega';
+  if (n >= 500_000) return 'macro';
+  if (n >= 100_000) return 'mid_tier';
+  if (n >= 10_000) return 'micro';
+  return 'nano';
+}
+
+// Adapt a client-approved creator into the RecommendationCreator shape so we can
+// reuse the same card / profile modal. The client-approved endpoint carries no AI
+// scores, so score fields are zeroed and hidden via the card's `showScores={false}`.
+function clientApprovedToCreator(c: ClientApprovedCreator): RecommendationCreator {
+  const p = c.profile;
+  const niches = (p.niche ?? '')
+    .split(',')
+    .map((n) => n.trim())
+    .filter(Boolean);
+
+  return {
+    creator_id: p.creator_id,
+    name: p.name,
+    tier: tierFromFollowers(p.follower_count ?? p.instagram_followers),
+    country: p.location ?? '',
+    languages: null,
+    niches: niches.length > 0 ? niches : null,
+    instagram_followers: p.instagram_followers ?? null,
+    tiktok_followers: p.tiktok_followers ?? null,
+    max_followers: p.follower_count ?? null,
+    engagement_rate: p.engagement_rate ?? p.instagram_engagement_rate ?? null,
+    instagram_handle: p.instagram_handle ?? null,
+    tiktok_handle: p.tiktok_handle ?? null,
+    recommendation_score: 0,
+    score_breakdown: { niche: 0, engagement: 0, completeness: 0 },
+    selection_reason: '',
+    status: null,
+    profile_picture: p.profile_image ?? null,
+    bio: p.bio ?? null,
+    email: p.email ?? null,
+    phone: p.phone ?? null,
+    rate: p.rate ?? null,
+    gender: null,
+    age: null,
+    is_verified: p.is_verified ?? false,
+    is_business: p.is_business ?? false,
+    searchapi_data: p.searchapi_data,
+  };
+}
+
+function ClientApprovedSection({ leadId }: { leadId: string }) {
+  const { data, isLoading, error } = useClientApprovedCreators(leadId);
+
+  if (isLoading) {
+    return (
+      <div className={styles.loadingState}>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className={`${styles.shimmer} ${styles.skeletonCard}`} />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.emptyState}>
+        <p>Could not load client-approved creators. Please try again.</p>
+      </div>
+    );
+  }
+
+  const creators = data?.creators ?? [];
+
+  if (creators.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <p>No creators have been approved by the client yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.recSection}>
+      <div className={styles.recHeader}>
+        <h3 className={styles.recTitle}>Client Approved Creators</h3>
+        <span className={styles.recMeta}>
+          {creators.length} approved{data?.brand_name ? ` · ${data.brand_name}` : ''}
+        </span>
+      </div>
+
+      <div className={styles.creatorGrid}>
+        {creators.map((c) => (
+          <RecommendationCard
+            key={c.assignment_id}
+            creator={clientApprovedToCreator(c)}
+            showScores={false}
+            onSeeConversation={() => {
+              /* Conversation flow to be wired up later */
+            }}
           />
         ))}
       </div>
@@ -1709,7 +1856,48 @@ function DiscoveryForm({ campaignId, onSuccess }: { campaignId: string; onSucces
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function InfluencerDiscovery({ leadId }: { leadId: string }) {
+export function InfluencerDiscovery({
+  leadId,
+  activeStage,
+}: {
+  leadId: string;
+  activeStage?: CampaignLeadStage;
+}) {
+  // The "Client Approved" stage reuses the creator card UI but shows the
+  // client-approved roster (no accept/reject — a "See Conversation" action instead).
+  //
+  // Both branches return a keyed component so that switching influencer sub-stages
+  // (this component instance is shared across the whole `influencer` group in
+  // StagePanel) cleanly unmounts one subtree and mounts the other, instead of
+  // reconciling two structurally different trees in place. The in-place swap could
+  // tear down a stateful child mid-commit (e.g. a playing <video> in a creator
+  // modal) and crash with "Cannot read properties of null (reading 'removeChild')".
+  if (activeStage === 'influencer_client_approved') {
+    return <ClientApprovedView key="client-approved" leadId={leadId} />;
+  }
+
+  return <DiscoveryView key="discovery" leadId={leadId} />;
+}
+
+function ClientApprovedView({ leadId }: { leadId: string }) {
+  return (
+    <div className={styles.root}>
+      <div className={styles.pageHeader}>
+        <div>
+          <h2 className={styles.pageTitle}>Client Approved</h2>
+          <p className={styles.pageSubtitle}>Creators approved by the client for this campaign</p>
+        </div>
+      </div>
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          <ClientApprovedSection leadId={leadId} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DiscoveryView({ leadId }: { leadId: string }) {
   const [tab, setTab] = useState<'discover' | 'shortlist'>('discover');
 
   const shortlistEnabled = tab === 'shortlist';
