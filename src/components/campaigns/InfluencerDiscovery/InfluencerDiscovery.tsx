@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import styles from './InfluencerDiscovery.module.css';
 import {
   useShortlist,
@@ -1512,6 +1513,7 @@ function clientApprovedToCreator(c: ClientApprovedCreator): RecommendationCreato
 }
 
 function ClientApprovedSection({ leadId }: { leadId: string }) {
+  const router = useRouter();
   const { data, isLoading, error } = useClientApprovedCreators(leadId);
 
   if (isLoading) {
@@ -1557,8 +1559,8 @@ function ClientApprovedSection({ leadId }: { leadId: string }) {
             key={c.assignment_id}
             creator={clientApprovedToCreator(c)}
             showScores={false}
-            onSeeConversation={() => {
-              /* Conversation flow to be wired up later */
+            onSeeConversation={(creatorId) => {
+              router.push(`/campaigns/inbox?lead=${leadId}&creator=${creatorId}&tab=influencer`);
             }}
           />
         ))}

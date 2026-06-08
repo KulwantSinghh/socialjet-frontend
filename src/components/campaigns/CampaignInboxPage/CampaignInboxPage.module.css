@@ -1,6 +1,9 @@
 .root {
   display: flex;
-  height: 100%;
+  /* The dashboard .content wrapper is not height-bounded (min-height: 100vh),
+     so anchor the inbox to the viewport: full height minus the topbar and the
+     content padding (space-6 top + bottom). This lets each pane scroll on its own. */
+  height: calc(100vh - var(--topbar-height) - 2 * var(--space-6));
   overflow: hidden;
 }
 

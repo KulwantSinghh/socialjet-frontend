@@ -254,6 +254,31 @@ export const ENDPOINTS = {
     RESUME_AUTOMATION: (leadId: string) => `/inbox/${leadId}/automation/resume`,
   },
 
+  OUTREACH: {
+    // Inbox + threads
+    INBOX: '/outreach/inbox',
+    THREAD: (leadId: string, creatorId: string) => `/outreach/${leadId}/${creatorId}`,
+    LEAD_MESSAGES: (leadId: string) => `/outreach/${leadId}`,
+    // Draft lifecycle
+    APPROVE: (messageId: string) => `/outreach/messages/${messageId}/approve`,
+    REJECT: (messageId: string) => `/outreach/messages/${messageId}/reject`,
+    SEND: (messageId: string) => `/outreach/messages/${messageId}/send`,
+    // CM actions on a thread
+    COMPOSE: (leadId: string, creatorId: string) => `/outreach/${leadId}/${creatorId}/compose`,
+    NEGOTIATE: (leadId: string, creatorId: string) => `/outreach/${leadId}/${creatorId}/negotiate`,
+    SEND_BRIEF: (leadId: string, creatorId: string) =>
+      `/outreach/${leadId}/${creatorId}/send-brief`,
+    GENERATE: (leadId: string, creatorId: string) => `/outreach/${leadId}/${creatorId}/generate`,
+    GENERATE_BULK: (leadId: string) => `/outreach/${leadId}/generate-bulk`,
+    // Aggregates
+    ANALYTICS: (leadId: string) => `/outreach/${leadId}/analytics`,
+    NEGOTIATION_SUMMARY: (leadId: string) => `/outreach/${leadId}/negotiation-summary`,
+    // Status / opt-in
+    OPT_IN: (leadId: string, creatorId: string) => `/outreach/opt-in/${leadId}/${creatorId}`,
+    NEGOTIATION_STATUS: (leadId: string, creatorId: string) =>
+      `/outreach/negotiation/${leadId}/${creatorId}`,
+  },
+
   WHATSAPP: {
     SEND: (leadId: string) => `/leads/${leadId}/whatsapp`,
   },
