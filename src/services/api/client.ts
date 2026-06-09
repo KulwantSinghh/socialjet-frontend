@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { toast } from 'sonner';
 
 import {
   API_BASE_URL,
@@ -9,7 +10,34 @@ import {
 } from '@/lib/constants';
 import { clearAuthSessionCookies, normalizeRole, writeAuthSessionCookies } from '@/lib/authSession';
 import { useAuthStore } from '@/stores/authStore';
+import { UserRole } from '@/types/roles.types';
 import { ENDPOINTS } from './endpoints';
+
+/** Methods that change server state. Admins are view-only on the team monitoring pages. */
+const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
+
+/** Team pages an admin may monitor but not modify (the real Sales / Campaign pages). */
+const ADMIN_VIEW_ONLY_PREFIXES = ['/sales', '/campaigns'];
+
+/**
+ * Admins can monitor every part of the Sales and Campaign teams via the real
+ * /sales and /campaigns pages, but must not be able to change anything there.
+ * This blocks any mutating request that originates while an admin is viewing one
+ * of those routes, before it reaches the server.
+ */
+function isAdminViewOnlyBlocked(config: InternalAxiosRequestConfig): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const method = (config.method ?? 'get').toLowerCase();
+  if (!MUTATING_METHODS.has(method)) return false;
+
+  // Scope the guard to the monitored team pages only (admin keeps full control elsewhere).
+  const pathname = window.location.pathname;
+  if (!ADMIN_VIEW_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return false;
+
+  const role = useAuthStore.getState().role ?? readPersistedRoleFromLocalStorage();
+  return !!role && normalizeRole(role) === UserRole.Admin;
+}
 
 /** Do not run refresh-token flow for these requests (prevents logout/login from hanging on 401). */
 function shouldSkipAuthRefresh(config: InternalAxiosRequestConfig): boolean {
@@ -117,6 +145,13 @@ export const apiClient = axios.create({
 // ---- Request Interceptor: Attach Auth Token ----
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (isAdminViewOnlyBlocked(config)) {
+      toast.error('View-only access — admins can monitor this team but cannot make changes here.', {
+        id: 'admin-view-only',
+      });
+      return Promise.reject(new axios.CanceledError('ADMIN_VIEW_ONLY'));
+    }
+
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token && config.headers) {

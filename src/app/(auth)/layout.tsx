@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { Toaster } from 'sonner';
 import styles from './layout.module.css';
 
 export const metadata: Metadata = {
@@ -45,6 +46,8 @@ export default function AuthLayout({
 
       {/* Copyright */}
       <footer className={styles.copyright}>© 2026 SocialJet. All rights reserved.</footer>
+
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

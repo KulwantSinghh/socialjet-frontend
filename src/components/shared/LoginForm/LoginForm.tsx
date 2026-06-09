@@ -18,11 +18,11 @@ const ROLE_OPTIONS = [
     label: 'Sales Team',
     description: 'Manage leads, pipeline, and deals.',
   },
-  {
-    value: 'finance_team',
-    label: 'Finance Team',
-    description: 'Handle invoices, billing, and revenue.',
-  },
+  // {
+  //   value: 'finance_team',
+  //   label: 'Finance Team',
+  //   description: 'Handle invoices, billing, and revenue.',
+  // },
   {
     value: 'campaign_manager',
     label: 'Campaign Manager',

@@ -1,14 +1,10 @@
-import type { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Forgot Password',
-};
+import { ForgotPasswordFlow } from '@/components/shared/ForgotPasswordFlow';
+import { withGuest } from '@/hoc/withGuest';
 
-export default function ForgotPasswordPage() {
-  return (
-    <div>
-      <h2>Forgot Password</h2>
-      <p>Forgot password form will be implemented here.</p>
-    </div>
-  );
+function ForgotPasswordPage() {
+  return <ForgotPasswordFlow />;
 }
+
+export default withGuest(ForgotPasswordPage);

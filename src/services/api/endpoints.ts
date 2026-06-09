@@ -10,6 +10,9 @@ export const ENDPOINTS = {
     REFRESH: '/auth/refresh',
     FORGOT_PASSWORD: '/auth/forgot-password',
     RESET_PASSWORD: '/auth/reset-password',
+    FORGOT_PASSWORD_REQUEST: '/auth/forgot-password/request',
+    FORGOT_PASSWORD_VERIFY: '/auth/forgot-password/verify',
+    FORGOT_PASSWORD_RESET: '/auth/forgot-password/reset',
     ME: '/auth/me',
     CREATE_USER: '/auth/users',
   },
@@ -20,6 +23,11 @@ export const ENDPOINTS = {
     CREATE: '/users',
     UPDATE: (id: string) => `/users/${id}`,
     DELETE: (id: string) => `/users/${id}`,
+  },
+
+  ADMIN: {
+    USERS: '/admin/users',
+    USER_DELETE: (id: string) => `/admin/users/${id}`,
   },
 
   LEADS: {

@@ -11,7 +11,6 @@ const ROLE_OPTIONS = [
   { value: 'sales', label: 'Sales' },
   { value: 'campaign_manager_lead', label: 'Campaign Manager Lead' },
   { value: 'campaign_manager', label: 'Campaign Manager' },
-  { value: 'finance', label: 'Finance' },
 ];
 
 export interface AddMemberModalProps {
@@ -62,13 +61,13 @@ export const AddMemberModal = ({ open, onClose, onSuccess }: AddMemberModalProps
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!username.trim() || !role) {
-      setErrorMsg('Username and Role are required.');
+    if (!username.trim() || !role || !email.trim()) {
+      setErrorMsg('Username, Role, and Email are required.');
       return;
     }
 
     createUser.mutate(
-      { username: username.trim(), role, email: email.trim() || undefined },
+      { username: username.trim(), role, email: email.trim() },
       {
         onSuccess: (data) => {
           setSuccessMsg(`✓ Member "${data.username}" created successfully as ${data.role}.`);
@@ -245,7 +244,7 @@ export const AddMemberModal = ({ open, onClose, onSuccess }: AddMemberModalProps
           {/* Email (optional) */}
           <div className={styles.field}>
             <label className={styles.label} htmlFor="member-email">
-              Email <span className={styles.optional}>(optional)</span>
+              Email <span className={styles.required}>*</span>
             </label>
             <div className={styles.inputWrapper}>
               <span className={styles.inputIcon}>
@@ -274,6 +273,7 @@ export const AddMemberModal = ({ open, onClose, onSuccess }: AddMemberModalProps
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                required
               />
             </div>
           </div>

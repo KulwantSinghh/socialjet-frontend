@@ -125,60 +125,6 @@ const SystemIcon = () => (
   </svg>
 );
 
-const DatabaseIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M4 6C4 7.65685 7.58172 9 12 9C16.4183 9 20 7.65685 20 6C20 4.34315 16.4183 3 12 3C7.58172 3 4 4.34315 4 6Z"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M20 6V10C20 11.6569 16.4183 13 12 13C7.58172 13 4 11.6569 4 10V6"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M20 10V14C20 15.6569 16.4183 17 12 17C7.58172 17 4 15.6569 4 14V10"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M20 14V18C20 19.6569 16.4183 21 12 21C7.58172 21 4 19.6569 4 18V14"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const SettingsIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <circle
-      cx="12"
-      cy="12"
-      r="3"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 const InboxIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path
@@ -381,6 +327,17 @@ const AccordionMenu = ({
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen ?? false);
 
+  // Resolve a single active sub-item: among all matching prefixes, the longest
+  // path wins. This keeps an index route (e.g. /sales) from staying highlighted
+  // when a deeper sibling (e.g. /sales/pipeline) is the real match.
+  const activePath = useMemo(() => {
+    const matches = subItems.filter(
+      (item) => pathname === item.path || pathname.startsWith(item.path + '/')
+    );
+    if (matches.length === 0) return null;
+    return matches.reduce((best, cur) => (cur.path.length > best.path.length ? cur : best)).path;
+  }, [subItems, pathname]);
+
   return (
     <div className={styles.accordion}>
       <button className={styles.accordionTrigger} onClick={() => setIsOpen(!isOpen)}>
@@ -399,11 +356,7 @@ const AccordionMenu = ({
               <Link
                 key={item.path}
                 href={item.path}
-                className={cn(
-                  styles.subLink,
-                  (pathname === item.path || pathname.startsWith(item.path + '/')) &&
-                    styles.subLinkActive
-                )}
+                className={cn(styles.subLink, item.path === activePath && styles.subLinkActive)}
               >
                 <span className={styles.subLinkLabel}>{item.label}</span>
               </Link>
@@ -437,13 +390,12 @@ export const Sidebar = () => {
           label: 'Sales',
           icon: <SalesIcon />,
           subItems: [
-            { label: 'Inbox', path: '/admin/sales/inbox' },
-            { label: 'Leads', path: '/admin/sales/leads' },
-            { label: 'Meetings', path: '/admin/sales/meetings' },
-            { label: 'Approvals', path: '/admin/sales/meeting-requests' },
-            { label: 'Lead Capture', path: '/admin/sales/lead-capture' },
-            { label: 'Nurture', path: '/admin/sales/nurture' },
-            { label: 'Sales Intelligence', path: '/admin/sales/intelligence' },
+            { label: 'Dashboard', path: '/sales' },
+            { label: 'Pipeline', path: '/sales/pipeline' },
+            { label: 'Leads', path: '/sales/leads' },
+            { label: 'Inbox', path: '/sales/inbox' },
+            { label: 'Meetings', path: '/sales/meetings' },
+            { label: 'Approvals', path: '/sales/meeting-requests' },
           ],
         },
         {
@@ -451,49 +403,18 @@ export const Sidebar = () => {
           label: 'Campaign Ops',
           icon: <CampaignIcon />,
           subItems: [
-            { label: 'Onboarding Agent', path: '/admin/campaigns/onboarding' },
-            { label: 'Discovery', path: '/admin/campaigns/discovery' },
-            { label: 'Outreach', path: '/admin/campaigns/outreach' },
-            { label: 'Content Tracker', path: '/admin/campaigns/content-tracker' },
-            { label: 'Review', path: '/admin/campaigns/review' },
+            { label: 'Dashboard', path: '/campaigns' },
+            { label: 'Leads', path: '/campaigns/leads' },
+            { label: 'Influencers', path: '/campaigns/influencers' },
+            { label: 'Inbox', path: '/campaigns/inbox' },
+            { label: 'Approvals', path: '/campaigns/approvals' },
           ],
         },
         {
-          type: 'accordion',
-          label: 'Finance & Analytics',
-          icon: <FinanceIcon />,
-          subItems: [
-            { label: 'Invoices', path: '/admin/finance/invoices' },
-            { label: 'Reports', path: '/admin/finance/reports' },
-            { label: 'Billing', path: '/admin/finance/billing' },
-          ],
-        },
-        {
-          type: 'accordion',
-          label: 'System',
+          type: 'link',
+          label: 'Team',
+          path: '/admin/system/users',
           icon: <SystemIcon />,
-          subItems: [
-            { label: 'Users', path: '/admin/system/users' },
-            { label: 'Roles', path: '/admin/system/roles' },
-          ],
-        },
-        {
-          type: 'accordion',
-          label: 'Influencer Database',
-          icon: <DatabaseIcon />,
-          subItems: [
-            { label: 'Search', path: '/admin/influencers/search' },
-            { label: 'Lists', path: '/admin/influencers/lists' },
-          ],
-        },
-        {
-          type: 'accordion',
-          label: 'Settings',
-          icon: <SettingsIcon />,
-          subItems: [
-            { label: 'General', path: '/admin/settings/general' },
-            { label: 'Security', path: '/admin/settings/security' },
-          ],
         },
       ];
     }
@@ -583,6 +504,7 @@ export const Sidebar = () => {
                 : pathname === item.path ||
                   (item.path !== '/sales' &&
                     item.path !== '/campaigns' &&
+                    item.path !== '/admin' &&
                     pathname.startsWith(item.path + '/'));
             return (
               <Link

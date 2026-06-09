@@ -1926,6 +1926,7 @@ ${styleBlocks}
   const activeDoc = activeTab === 'onboarding' ? onboardingDoc : null;
   const activeKol = activeTab === 'kol_brief' ? kolBrief : null;
   const activeStatus = activeTab === 'onboarding' ? onboardingDoc?.status : kolBrief?.status;
+  const isAlreadyApproved = activeStatus === 'admin_approved' || activeStatus === 'sent_to_client';
   const isLoading = activeTab === 'onboarding' ? docsLoading : kolLoading;
   const hasDoc = activeTab === 'onboarding' ? !!onboardingDoc?.document : !!kolBrief?.document;
 
@@ -2010,9 +2011,10 @@ ${styleBlocks}
                 </button>
                 <button
                   className={`${styles.btn} ${styles.btnPrimary}`}
-                  disabled={submitting || activeTab === 'kol_brief'}
+                  disabled={submitting || activeTab === 'kol_brief' || isAlreadyApproved}
+                  title={isAlreadyApproved ? 'Already approved' : undefined}
                   style={
-                    activeTab === 'kol_brief'
+                    activeTab === 'kol_brief' || isAlreadyApproved
                       ? { opacity: 0.35, cursor: 'not-allowed', filter: 'blur(0.4px)' }
                       : undefined
                   }

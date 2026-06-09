@@ -6,6 +6,12 @@ import type {
   AuthResponse,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  RequestResetOtpRequest,
+  RequestResetOtpResponse,
+  VerifyResetOtpRequest,
+  VerifyResetOtpResponse,
+  ResetPasswordWithTokenRequest,
+  ResetPasswordWithTokenResponse,
   User,
   CreateUserRequest,
   CreateUserResponse,
@@ -63,6 +69,25 @@ export const authService = {
 
   resetPassword: async (payload: ResetPasswordRequest): Promise<void> => {
     await apiClient.post(ENDPOINTS.AUTH.RESET_PASSWORD, payload);
+  },
+
+  // ---- Forgot password (OTP) flow ----
+
+  requestResetOtp: async (payload: RequestResetOtpRequest): Promise<RequestResetOtpResponse> => {
+    const { data } = await apiClient.post(ENDPOINTS.AUTH.FORGOT_PASSWORD_REQUEST, payload);
+    return data;
+  },
+
+  verifyResetOtp: async (payload: VerifyResetOtpRequest): Promise<VerifyResetOtpResponse> => {
+    const { data } = await apiClient.post(ENDPOINTS.AUTH.FORGOT_PASSWORD_VERIFY, payload);
+    return data;
+  },
+
+  resetPasswordWithToken: async (
+    payload: ResetPasswordWithTokenRequest
+  ): Promise<ResetPasswordWithTokenResponse> => {
+    const { data } = await apiClient.post(ENDPOINTS.AUTH.FORGOT_PASSWORD_RESET, payload);
+    return data;
   },
 
   createUser: async (payload: CreateUserRequest): Promise<CreateUserResponse> => {
