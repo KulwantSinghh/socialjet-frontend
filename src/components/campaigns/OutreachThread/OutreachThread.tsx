@@ -7,6 +7,7 @@ import {
   outreachKeys,
   useApproveMessage,
   useCreatorConversation,
+  useNegotiate,
   useRejectMessage,
   useReply,
   useSendBrief,
@@ -43,6 +44,35 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
 
   const sendBrief = useSendBrief(leadId, creatorId);
   const updateStatus = useUpdateNegotiationStatus(leadId, creatorId);
+
+  // Step 5 — Negotiation. When a creator reply lands, the backend generates a
+  // counter-offer draft. `creator_reply` is taken from the synced inbound
+  // message, so the CM never re-pastes text already in the thread.
+  const negotiate = useNegotiate(leadId, creatorId);
+  const { mutate: runNegotiate, isPending: negotiating } = negotiate;
+
+  // Auto-generate a draft the moment a new, unanswered creator reply appears.
+  // Replies we've already handled are tracked so a draft is generated exactly
+  // once per reply, even across the thread's polling refetches.
+  const autoNegotiatedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (negotiating || messages.length === 0) return;
+    const last = messages[messages.length - 1];
+    // A draft is only owed when the latest message is an unanswered creator
+    // reply — once a draft/outbound message follows it, we've responded.
+    if (last.direction !== 'inbound') return;
+    if (autoNegotiatedRef.current.has(last.message_id)) return;
+    const replyText = (last.final_content || last.draft_content || '').trim();
+    if (!replyText) return;
+    autoNegotiatedRef.current.add(last.message_id);
+    runNegotiate({ creator_reply: replyText });
+  }, [messages, negotiating, runNegotiate]);
+
+  const handleNegotiate = (reply: string) => {
+    const text = reply.trim();
+    if (!text) return;
+    runNegotiate({ creator_reply: text });
+  };
 
   // Backend only surfaces creator replies in /thread AFTER a sync. So on opening
   // a conversation, pull replies first, then refetch this thread so they appear.
@@ -152,15 +182,36 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
       {/* Messages */}
       <div className={styles.messages}>
         {isLoading ? (
-          <div className={styles.loading}>Loading conversation…</div>
+          <div key="loading" className={styles.loading}>
+            Loading conversation…
+          </div>
         ) : messages.length === 0 ? (
-          <div className={styles.empty}>No messages yet. A draft will appear once generated.</div>
+          <div key="empty" className={styles.empty}>
+            No messages yet. A draft will appear once generated.
+          </div>
         ) : (
           messages.map((msg) => (
-            <MessageBubble key={msg.message_id} leadId={leadId} creatorId={creatorId} msg={msg} />
+            <MessageBubble
+              key={msg.message_id}
+              leadId={leadId}
+              creatorId={creatorId}
+              msg={msg}
+              onNegotiate={handleNegotiate}
+              negotiating={negotiating}
+            />
           ))
         )}
-        <div ref={messagesEndRef} />
+        {negotiating && (
+          <div key="neg-status" className={styles.negStatus}>
+            Generating AI counter-offer…
+          </div>
+        )}
+        {negotiate.isError && (
+          <div key="neg-error" className={styles.negError}>
+            Couldn’t generate a counter-offer. Use “Generate AI counter-offer” to retry.
+          </div>
+        )}
+        <div key="end" ref={messagesEndRef} />
       </div>
 
       {/* Composer */}
@@ -175,10 +226,14 @@ function MessageBubble({
   leadId,
   creatorId,
   msg,
+  onNegotiate,
+  negotiating,
 }: {
   leadId: string;
   creatorId: string;
   msg: OutreachMessage;
+  onNegotiate: (reply: string) => void;
+  negotiating: boolean;
 }) {
   const approve = useApproveMessage(leadId, creatorId);
   const reject = useRejectMessage(leadId, creatorId);
@@ -271,6 +326,21 @@ function MessageBubble({
             </svg>
           )}
         </div>
+
+        {/* Inbound reply — generate an AI counter-offer from this message.
+            A draft is auto-generated for the latest reply; this button covers
+            regenerating or responding to an earlier reply. */}
+        {isInbound && content.trim() && (
+          <div className={styles.draftActions}>
+            <button
+              className={`${styles.draftBtn} ${styles.negotiateBtn}`}
+              disabled={negotiating}
+              onClick={() => onNegotiate(content)}
+            >
+              {negotiating ? 'Generating…' : 'Generate AI counter-offer'}
+            </button>
+          </div>
+        )}
 
         {/* Draft actions */}
         {isDraft && !rejecting && (
