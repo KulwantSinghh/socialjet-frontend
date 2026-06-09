@@ -257,7 +257,10 @@ export const ENDPOINTS = {
   OUTREACH: {
     // Inbox + threads
     INBOX: '/outreach/inbox',
+    SYNC_REPLIES: '/outreach/sync-replies',
     THREAD: (leadId: string, creatorId: string) => `/outreach/${leadId}/${creatorId}`,
+    EMAIL_THREAD: (leadId: string, creatorId: string) => `/outreach/${leadId}/${creatorId}/thread`,
+    REPLY: (leadId: string, creatorId: string) => `/outreach/${leadId}/${creatorId}/reply`,
     LEAD_MESSAGES: (leadId: string) => `/outreach/${leadId}`,
     // Draft lifecycle
     APPROVE: (messageId: string) => `/outreach/messages/${messageId}/approve`,

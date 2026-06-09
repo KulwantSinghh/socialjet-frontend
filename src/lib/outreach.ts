@@ -63,6 +63,7 @@ const MESSAGE_TYPE_LABELS: Record<string, string> = {
   negotiation: 'Negotiation',
   brief: 'KOL Brief',
   custom: 'Custom Message',
+  creator_reply: 'Creator Reply',
 };
 
 export function messageTypeLabel(type: OutreachMessageType | string): string {
@@ -75,6 +76,8 @@ const MESSAGE_STATUS_META: Record<string, { label: string; tone: Tone }> = {
   edited: { label: 'Sending…', tone: 'info' },
   sent: { label: 'Sent', tone: 'success' },
   rejected: { label: 'Rejected', tone: 'danger' },
+  received: { label: 'Received', tone: 'neutral' },
+  failed: { label: 'Failed', tone: 'danger' },
 };
 
 export function messageStatusMeta(status: OutreachMessageStatus | string): {

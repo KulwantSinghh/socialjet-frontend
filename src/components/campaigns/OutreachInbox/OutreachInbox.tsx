@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './OutreachInbox.module.css';
-import { useGenerateBulk, useOutreachInbox } from '@/hooks/useOutreach';
+import { useGenerateBulk, useOutreachInbox, useSyncReplies } from '@/hooks/useOutreach';
 import { OutreachThread } from '@/components/campaigns/OutreachThread';
 import { OutreachOverview } from '@/components/campaigns/OutreachOverview';
 import type { OutreachInboxCreator, OutreachInboxLead } from '@/types/outreach.types';
@@ -19,6 +19,13 @@ type LeadView = 'conversations' | 'overview';
 export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInboxProps) => {
   const { data, isLoading } = useOutreachInbox();
   const leads = useMemo(() => data?.inbox ?? [], [data]);
+
+  // Pull fresh inbound replies once when the inbox opens. `mutate` is stable, so
+  // this fires a single time on mount and refreshes the inbox on success.
+  const { mutate: syncReplies } = useSyncReplies();
+  useEffect(() => {
+    syncReplies();
+  }, [syncReplies]);
 
   const [search, setSearch] = useState('');
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId ?? null);
@@ -211,9 +218,12 @@ function CreatorRow({
   onClick: () => void;
 }) {
   const meta = negotiationStatusMeta(creator.negotiation_status);
+  const awaitingUs = creator.last_direction === 'inbound';
   return (
     <button
-      className={`${styles.creatorItem} ${active ? styles.creatorItemActive : ''}`}
+      className={`${styles.creatorItem} ${active ? styles.creatorItemActive : ''} ${
+        awaitingUs ? styles.creatorItemAwaiting : ''
+      }`}
       onClick={onClick}
     >
       <div className={styles.creatorAvatar}>
@@ -234,12 +244,18 @@ function CreatorRow({
           <div className={styles.creatorPreview}>{creator.last_message}</div>
         )}
         <div className={styles.creatorTags}>
+          {creator.has_unread_reply && <span className={styles.newReplyPill}>New Reply</span>}
           <span className={`${styles.statusPill} ${styles[`tone_${meta.tone}`]}`}>
             {meta.label}
           </span>
           {creator.draft_count > 0 && (
             <span className={styles.draftPill}>
               {creator.draft_count} draft{creator.draft_count > 1 ? 's' : ''}
+            </span>
+          )}
+          {creator.reply_count != null && creator.reply_count > 0 && (
+            <span className={styles.msgCount}>
+              {creator.reply_count} repl{creator.reply_count > 1 ? 'ies' : 'y'}
             </span>
           )}
           {creator.total_messages > 0 && (

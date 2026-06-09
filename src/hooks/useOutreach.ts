@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { outreachService } from '@/services/outreach.service';
 import type {
@@ -6,7 +7,9 @@ import type {
   GenerateBulkRequest,
   NegotiateRequest,
   OptInRequest,
+  OutreachMessage,
   RejectMessageRequest,
+  ReplyRequest,
   UpdateNegotiationStatusRequest,
 } from '@/types/outreach.types';
 
@@ -21,6 +24,8 @@ export const outreachKeys = {
   inbox: () => [...outreachKeys.all, 'inbox'] as const,
   thread: (leadId: string, creatorId: string) =>
     [...outreachKeys.all, 'thread', leadId, creatorId] as const,
+  emailThread: (leadId: string, creatorId: string) =>
+    [...outreachKeys.all, 'email-thread', leadId, creatorId] as const,
   analytics: (leadId: string) => [...outreachKeys.all, 'analytics', leadId] as const,
   summary: (leadId: string) => [...outreachKeys.all, 'summary', leadId] as const,
   clientApproved: (leadId: string) => [...outreachKeys.all, 'client-approved', leadId] as const,
@@ -37,6 +42,15 @@ export function useOutreachInbox() {
   });
 }
 
+/** Pull new inbound replies from the email inbox (call once on inbox load). */
+export function useSyncReplies() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => outreachService.syncReplies(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: outreachKeys.inbox() }),
+  });
+}
+
 // ── Thread ────────────────────────────────────────────────────────────────
 
 export function useOutreachThread(leadId: string | undefined, creatorId: string | undefined) {
@@ -47,6 +61,74 @@ export function useOutreachThread(leadId: string | undefined, creatorId: string 
     staleTime: 10_000,
     refetchInterval: 10_000,
   });
+}
+
+export function useEmailThread(leadId: string | undefined, creatorId: string | undefined) {
+  return useQuery({
+    queryKey: outreachKeys.emailThread(leadId ?? '', creatorId ?? ''),
+    queryFn: () => outreachService.getEmailThread(leadId!, creatorId!),
+    enabled: !!leadId && !!creatorId,
+    staleTime: 10_000,
+    refetchInterval: 10_000,
+  });
+}
+
+/**
+ * Merge the draft/negotiation thread with the email conversation into a single
+ * timeline. Messages shared by both endpoints (sent outbound) are deduped by
+ * message_id, preferring draft/negotiation richness while adopting the email
+ * endpoint's direction/from_email. Inbound replies and drafts each survive.
+ */
+export function mergeThreadMessages(
+  base: OutreachMessage[] = [],
+  email: OutreachMessage[] = []
+): OutreachMessage[] {
+  const map = new Map<string, OutreachMessage>();
+  for (const m of base) {
+    map.set(m.message_id, { direction: 'outbound', ...m });
+  }
+  for (const m of email) {
+    const existing = map.get(m.message_id);
+    map.set(
+      m.message_id,
+      existing
+        ? {
+            ...existing,
+            direction: m.direction ?? existing.direction,
+            from_email: m.from_email ?? existing.from_email,
+            subject: m.subject ?? existing.subject,
+            final_content: m.final_content ?? existing.final_content,
+          }
+        : m
+    );
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+}
+
+/**
+ * Unified conversation: drafts + negotiation (old endpoint) merged with the
+ * two-sided email thread (sent + inbound replies). Also surfaces the merged
+ * loading state and the email thread's creator metadata.
+ */
+export function useCreatorConversation(leadId: string | undefined, creatorId: string | undefined) {
+  const base = useOutreachThread(leadId, creatorId);
+  const email = useEmailThread(leadId, creatorId);
+
+  const messages = useMemo(
+    () => mergeThreadMessages(base.data?.messages, email.data?.messages),
+    [base.data?.messages, email.data?.messages]
+  );
+
+  return {
+    messages,
+    creatorName: email.data?.creator_name ?? base.data?.creator_name,
+    creatorEmail: email.data?.creator_email,
+    isLoading: base.isLoading || email.isLoading,
+    // Timestamp of the latest email-thread fetch — used to clear unread state.
+    emailFetchedAt: email.dataUpdatedAt,
+  };
 }
 
 // ── Aggregates ──────────────────────────────────────────────────────────────
@@ -78,10 +160,19 @@ function useThreadInvalidation(leadId: string, creatorId: string) {
   const qc = useQueryClient();
   return () => {
     qc.invalidateQueries({ queryKey: outreachKeys.thread(leadId, creatorId) });
+    qc.invalidateQueries({ queryKey: outreachKeys.emailThread(leadId, creatorId) });
     qc.invalidateQueries({ queryKey: outreachKeys.inbox() });
     qc.invalidateQueries({ queryKey: outreachKeys.analytics(leadId) });
     qc.invalidateQueries({ queryKey: outreachKeys.summary(leadId) });
   };
+}
+
+export function useReply(leadId: string, creatorId: string) {
+  const invalidate = useThreadInvalidation(leadId, creatorId);
+  return useMutation({
+    mutationFn: (payload: ReplyRequest) => outreachService.reply(leadId, creatorId, payload),
+    onSuccess: invalidate,
+  });
 }
 
 export function useApproveMessage(leadId: string, creatorId: string) {

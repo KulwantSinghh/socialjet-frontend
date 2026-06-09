@@ -15,7 +15,10 @@ export type OutreachMessageType =
   | 'follow_up_2'
   | 'negotiation'
   | 'brief'
-  | 'custom';
+  | 'custom'
+  | 'creator_reply';
+
+export type MessageDirection = 'inbound' | 'outbound';
 
 export type OutreachMessageStatus = 'draft' | 'approved' | 'edited' | 'sent' | 'rejected';
 
@@ -52,6 +55,10 @@ export interface OutreachInboxCreator {
   negotiation_status: NegotiationStatus;
   negotiation_round: number;
   deal_amount: number | null;
+  // Email-thread fields (added by the sync-replies integration)
+  reply_count?: number;
+  has_unread_reply?: boolean;
+  last_direction?: MessageDirection | string;
 }
 
 export interface OutreachInboxLead {
@@ -83,9 +90,10 @@ export interface OutreachMessage {
   created_at: string;
   sent_at?: string | null;
   rejected_reason?: string | null;
-  // Inbound creator replies (industry-standard two-sided chat).
-  // Present when the backend syncs/records the creator's reply.
-  direction?: 'inbound' | 'outbound';
+  // Inbound creator replies (two-sided email chat). Present when the backend
+  // syncs the creator's reply via /sync-replies + /thread.
+  direction?: MessageDirection;
+  from_email?: string | null;
   // Negotiation metadata (present on negotiation drafts)
   intent_detected?: NegotiationIntent | null;
   negotiation_round?: number | null;
@@ -98,6 +106,28 @@ export interface OutreachThreadResponse {
   messages: OutreachMessage[];
   total: number;
   creator_name: string;
+}
+
+// ── Email thread (sync-replies integration) ───────────────────────────────
+
+export interface SyncRepliesResponse {
+  synced: number;
+  total_inbound_checked: number;
+}
+
+/** GET /outreach/{lead}/{creator}/thread — two-sided email conversation. */
+export interface EmailThreadResponse {
+  messages: OutreachMessage[];
+  total: number;
+  outbound_count: number;
+  inbound_count: number;
+  creator_name: string;
+  creator_email: string;
+}
+
+export interface ReplyRequest {
+  content: string;
+  subject?: string;
 }
 
 // ── Draft lifecycle (Step 3) ──────────────────────────────────────────────

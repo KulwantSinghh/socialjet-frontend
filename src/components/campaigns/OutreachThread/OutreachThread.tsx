@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import styles from './OutreachThread.module.css';
 import {
+  outreachKeys,
   useApproveMessage,
-  useComposeMessage,
-  useNegotiate,
-  useOutreachThread,
+  useCreatorConversation,
   useRejectMessage,
+  useReply,
   useSendBrief,
   useSendMessage,
+  useSyncReplies,
   useUpdateNegotiationStatus,
 } from '@/hooks/useOutreach';
 import type {
@@ -33,21 +35,39 @@ interface OutreachThreadProps {
   onBack?: () => void;
 }
 
-type ComposerMode = 'reply' | 'log';
-
 export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps) => {
   const creatorId = creator.creator_id;
-  const { data, isLoading } = useOutreachThread(leadId, creatorId);
+  const qc = useQueryClient();
+  const { messages, isLoading, emailFetchedAt } = useCreatorConversation(leadId, creatorId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sendBrief = useSendBrief(leadId, creatorId);
   const updateStatus = useUpdateNegotiationStatus(leadId, creatorId);
 
+  // Backend only surfaces creator replies in /thread AFTER a sync. So on opening
+  // a conversation, pull replies first, then refetch this thread so they appear.
+  const { mutate: syncReplies } = useSyncReplies();
+  useEffect(() => {
+    syncReplies(undefined, {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: outreachKeys.emailThread(leadId, creatorId) });
+        qc.invalidateQueries({ queryKey: outreachKeys.thread(leadId, creatorId) });
+      },
+    });
+  }, [syncReplies, qc, leadId, creatorId]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [data?.messages]);
+  }, [messages]);
 
-  const messages = data?.messages ?? [];
+  // Fetching the email thread clears has_unread_reply server-side; refresh the
+  // inbox once that fetch lands so the "New Reply" badge drops.
+  useEffect(() => {
+    if (emailFetchedAt) {
+      qc.invalidateQueries({ queryKey: outreachKeys.inbox() });
+    }
+  }, [emailFetchedAt, qc]);
+
   const statusMeta = negotiationStatusMeta(creator.negotiation_status);
   const canSendBrief =
     creator.negotiation_status === 'interested' || creator.negotiation_status === 'confirmed';
@@ -144,7 +164,7 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
       </div>
 
       {/* Composer */}
-      <Composer leadId={leadId} creatorId={creatorId} channel={messages[0]?.channel ?? 'email'} />
+      <Composer leadId={leadId} creatorId={creatorId} />
     </div>
   );
 };
@@ -197,6 +217,9 @@ function MessageBubble({
         </div>
 
         {msg.subject && <div className={styles.subject}>{msg.subject}</div>}
+        {isInbound && msg.from_email && (
+          <div className={styles.fromEmail}>from {msg.from_email}</div>
+        )}
 
         {editing ? (
           <textarea
@@ -344,81 +367,44 @@ function MessageBubble({
 
 // ── Composer ──────────────────────────────────────────────────────────────
 
-function Composer({
-  leadId,
-  creatorId,
-  channel,
-}: {
-  leadId: string;
-  creatorId: string;
-  channel: string;
-}) {
-  const [mode, setMode] = useState<ComposerMode>('reply');
+function Composer({ leadId, creatorId }: { leadId: string; creatorId: string }) {
   const [text, setText] = useState('');
   const [subject, setSubject] = useState('');
 
-  const compose = useComposeMessage(leadId, creatorId);
-  const negotiate = useNegotiate(leadId, creatorId);
-  const isEmail = channel === 'email';
+  const reply = useReply(leadId, creatorId);
 
   function handleSend() {
     if (!text.trim()) return;
-    if (mode === 'reply') {
-      compose.mutate(
-        {
-          content: text.trim(),
-          subject: isEmail && subject.trim() ? subject.trim() : undefined,
-          auto_send: true,
+    reply.mutate(
+      {
+        content: text.trim(),
+        subject: subject.trim() ? subject.trim() : undefined,
+      },
+      {
+        onSuccess: () => {
+          setText('');
+          setSubject('');
         },
-        {
-          onSuccess: () => {
-            setText('');
-            setSubject('');
-          },
-        }
-      );
-    } else {
-      negotiate.mutate({ creator_reply: text.trim() }, { onSuccess: () => setText('') });
-    }
+      }
+    );
   }
 
-  const pending = compose.isPending || negotiate.isPending;
+  const pending = reply.isPending;
 
   return (
     <div className={styles.composer}>
-      <div className={styles.composerTabs}>
-        <button
-          className={`${styles.composerTab} ${mode === 'reply' ? styles.composerTabActive : ''}`}
-          onClick={() => setMode('reply')}
-        >
-          Reply as us
-        </button>
-        <button
-          className={`${styles.composerTab} ${mode === 'log' ? styles.composerTabActive : ''}`}
-          onClick={() => setMode('log')}
-        >
-          Log creator reply → AI counter
-        </button>
-      </div>
-
-      {mode === 'reply' && isEmail && (
-        <input
-          className={styles.subjectInput}
-          placeholder="Subject (optional)"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-      )}
+      <input
+        className={styles.subjectInput}
+        placeholder="Subject (optional)"
+        value={subject}
+        onChange={(e) => setSubject(e.target.value)}
+      />
 
       <div className={styles.composerRow}>
         <textarea
           className={styles.composerInput}
           rows={1}
-          placeholder={
-            mode === 'reply'
-              ? 'Write a message — sends immediately…'
-              : "Paste the creator's reply — AI drafts a counter-offer for your approval…"
-          }
+          placeholder="Write a reply — sends to the creator by email…"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -432,7 +418,7 @@ function Composer({
           className={styles.sendBtn}
           onClick={handleSend}
           disabled={pending || !text.trim()}
-          title={mode === 'reply' ? 'Send' : 'Generate counter-offer'}
+          title="Send reply"
         >
           {pending ? (
             '…'

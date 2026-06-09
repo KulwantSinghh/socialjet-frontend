@@ -4,6 +4,7 @@ import type {
   ApproveMessageRequest,
   ClientApprovedResponse,
   ComposeMessageRequest,
+  EmailThreadResponse,
   GenerateBulkRequest,
   GenerateBulkResponse,
   GenerateOutreachRequest,
@@ -17,7 +18,9 @@ import type {
   OutreachMessage,
   OutreachThreadResponse,
   RejectMessageRequest,
+  ReplyRequest,
   SendBriefResponse,
+  SyncRepliesResponse,
   UpdateNegotiationStatusRequest,
 } from '@/types/outreach.types';
 
@@ -32,9 +35,32 @@ export const outreachService = {
     return data;
   },
 
-  // Step 2 — conversation thread with a creator
+  // Pull new inbound replies from the email inbox (call on inbox page load)
+  syncReplies: async (): Promise<SyncRepliesResponse> => {
+    const { data } = await apiClient.post(ENDPOINTS.OUTREACH.SYNC_REPLIES);
+    return data;
+  },
+
+  // Step 2 — conversation thread with a creator (drafts + negotiation metadata)
   getThread: async (leadId: string, creatorId: string): Promise<OutreachThreadResponse> => {
     const { data } = await apiClient.get(ENDPOINTS.OUTREACH.THREAD(leadId, creatorId));
+    return data;
+  },
+
+  // Two-sided email conversation (sent + inbound replies). Fetching this also
+  // clears the creator's has_unread_reply flag server-side.
+  getEmailThread: async (leadId: string, creatorId: string): Promise<EmailThreadResponse> => {
+    const { data } = await apiClient.get(ENDPOINTS.OUTREACH.EMAIL_THREAD(leadId, creatorId));
+    return data;
+  },
+
+  // Reply to a creator over email
+  reply: async (
+    leadId: string,
+    creatorId: string,
+    payload: ReplyRequest
+  ): Promise<OutreachMessage> => {
+    const { data } = await apiClient.post(ENDPOINTS.OUTREACH.REPLY(leadId, creatorId), payload);
     return data;
   },
 
