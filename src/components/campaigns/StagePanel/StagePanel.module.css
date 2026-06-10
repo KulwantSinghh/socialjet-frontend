@@ -4,18 +4,23 @@
   overflow-y: auto;
 }
 
-/* Meeting layout — main + sidebar */
+/* Meeting layout — main + sidebar.
+   Pinned to the content area (.contentInner is the positioning context) so the
+   two panes get a bounded height and scroll internally, rather than scrolling
+   the whole content column. */
 .meetingLayout {
+  position: absolute;
+  inset: 0;
   display: flex;
-  height: 100%;
-  min-height: 0;
   overflow: hidden;
 }
 
 .meetingMain {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
 }
@@ -35,15 +40,37 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-bg-secondary);
   flex-shrink: 0;
 }
 
+.sidebarHeaderMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sidebarHeaderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
 .sidebarTitle {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  line-height: var(--leading-tight);
 }
 
 .sidebarSubtitle {
@@ -128,7 +155,10 @@
 
 .sidebarContent {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  /* Keep the sidebar's scroll self-contained — don't chain to the main panel. */
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
 }
@@ -144,8 +174,16 @@
 }
 
 .sidebarHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
   font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-tertiary, #9ca3af);
+}
+
+.sidebarHint svg {
+  flex-shrink: 0;
 }
 
 .sidebarLoading {
@@ -1444,16 +1482,74 @@
   text-align: center;
 }
 
-.transcriptBox {
+/* ── Transcript conversation thread ── */
+.transcriptThread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
   padding: var(--space-4);
+}
+
+.transcriptTurn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.transcriptAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.01em;
+}
+
+.transcriptTurnBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.transcriptSpeaker {
   font-size: var(--text-xs);
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--color-text-secondary);
-  max-height: 300px;
-  overflow-y: auto;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.transcriptText {
   margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+  word-break: break-word;
+}
+
+/* Per-speaker accent colors (assigned by order of appearance) */
+.speaker0 {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.speaker1 {
+  background: var(--color-success-50);
+  color: var(--color-success-700);
+}
+
+.speaker2 {
+  background: var(--color-warning-50);
+  color: var(--color-warning-700);
+}
+
+.speaker3 {
+  background: var(--color-error-50);
+  color: var(--color-error-700);
 }
 
 .reportCard {

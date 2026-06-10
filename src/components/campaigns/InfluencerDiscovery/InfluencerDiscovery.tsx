@@ -1881,17 +1881,45 @@ export function InfluencerDiscovery({
   return <DiscoveryView key="discovery" leadId={leadId} />;
 }
 
-function ClientApprovedView({ leadId }: { leadId: string }) {
+export function ClientApprovedView({
+  leadId,
+  title = 'Client Approved',
+  subtitle = 'Creators approved by the client for this campaign',
+  notice,
+}: {
+  leadId: string;
+  title?: string;
+  subtitle?: string;
+  notice?: string;
+}) {
   return (
     <div className={styles.root}>
       <div className={styles.pageHeader}>
         <div>
-          <h2 className={styles.pageTitle}>Client Approved</h2>
-          <p className={styles.pageSubtitle}>Creators approved by the client for this campaign</p>
+          <h2 className={styles.pageTitle}>{title}</h2>
+          <p className={styles.pageSubtitle}>{subtitle}</p>
         </div>
       </div>
       <div className={styles.layout}>
         <div className={styles.main}>
+          {notice && (
+            <div className={styles.conversationNotice}>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>{notice}</span>
+            </div>
+          )}
           <ClientApprovedSection leadId={leadId} />
         </div>
       </div>

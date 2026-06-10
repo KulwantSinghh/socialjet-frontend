@@ -1,16 +1,18 @@
 .root {
   display: flex;
   flex-direction: column;
-  /* Fill the viewport minus the dashboard topbar and the .content padding,
-     so the timeline and content columns scroll independently instead of the
-     whole document scrolling (which carried the timeline away with it). */
-  height: calc(100vh - var(--topbar-height) - (var(--space-6) * 2));
+  /* Pull up into the dashboard .content top padding (var(--space-6)) so the
+     header sits higher/sleeker, leaving just a small var(--space-2) gap at top.
+     Height is recomputed to keep the original var(--space-6) gap at the bottom,
+     so the timeline and content columns still scroll independently within view. */
+  margin-top: calc(-1 * var(--space-6) + var(--space-2));
+  height: calc(100vh - var(--topbar-height) - var(--space-6) - var(--space-2));
   overflow: hidden;
 }
 
 /* Top bar */
 .topBar {
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-2-5) var(--space-6);
   border-bottom: 1px solid var(--color-border-default);
   display: flex;
   align-items: center;
@@ -48,12 +50,12 @@
 }
 
 .clientAvatar {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-full);
   background: var(--color-primary-100);
   color: var(--color-primary-700);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   font-weight: var(--font-weight-bold);
   display: flex;
   align-items: center;
@@ -62,9 +64,10 @@
 }
 
 .clientName {
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  line-height: var(--leading-tight);
 }
 
 .clientCompany {
@@ -82,7 +85,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  height: 36px;
+  height: 34px;
   padding: 0 var(--space-4);
   border: 1px solid var(--color-primary-300);
   border-radius: var(--radius-lg);
@@ -105,7 +108,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  height: 36px;
+  height: 34px;
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-lg);
@@ -164,6 +167,10 @@
 .contentInner {
   background: var(--color-bg-primary);
   min-height: 100%;
+  /* Positioning context so a stage can pin a full-height, internally-scrolling
+     layout (e.g. the meeting transcript sidebar) to the visible content area
+     without forcing the whole content column to scroll. */
+  position: relative;
 }
 
 /* Skeleton */

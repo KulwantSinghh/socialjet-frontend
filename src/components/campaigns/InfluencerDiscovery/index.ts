@@ -1,1 +1,1 @@
-export { InfluencerDiscovery } from './InfluencerDiscovery';
+export { InfluencerDiscovery, ClientApprovedView } from './InfluencerDiscovery';

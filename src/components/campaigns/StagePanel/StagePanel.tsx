@@ -3,7 +3,10 @@
 import { useState, useRef, useCallback } from 'react';
 import styles from './StagePanel.module.css';
 import { ProposalEditor } from '@/components/shared/ProposalEditor';
-import { InfluencerDiscovery } from '@/components/campaigns/InfluencerDiscovery';
+import {
+  InfluencerDiscovery,
+  ClientApprovedView,
+} from '@/components/campaigns/InfluencerDiscovery';
 import type { Editor } from '@tiptap/react';
 import {
   useQuestionnaire,
@@ -587,6 +590,68 @@ function QuestionnaireStage({ leadId }: { leadId: string }) {
   );
 }
 
+// ─── Transcript parsing (presentation helper) ─────────────────────────────────
+interface TranscriptTurn {
+  speaker: string;
+  lines: string[];
+}
+
+// Matches a "Speaker Name:" prefix at the start of a line. Kept deliberately
+// strict (Title-cased words, no inner punctuation) so mid-sentence colons like
+// "let me confirm:" are NOT mistaken for a new speaker.
+const SPEAKER_PREFIX = /^([A-Z][A-Za-z'.-]*(?:\s+[A-Z][A-Za-z'.-]*){0,3}):\s+(.*)$/;
+
+function parseTranscript(raw: string): TranscriptTurn[] {
+  const turns: TranscriptTurn[] = [];
+  for (const rawLine of raw.split('\n')) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const match = line.match(SPEAKER_PREFIX);
+    if (match) {
+      const speaker = match[1].trim();
+      const text = match[2].trim();
+      const last = turns[turns.length - 1];
+      // Merge consecutive lines from the same speaker into one turn.
+      if (last && last.speaker === speaker) {
+        if (text) last.lines.push(text);
+      } else {
+        turns.push({ speaker, lines: text ? [text] : [] });
+      }
+    } else {
+      // Continuation of the previous speaker's wrapped line.
+      const last = turns[turns.length - 1];
+      if (last && last.lines.length) {
+        last.lines[last.lines.length - 1] += ' ' + line;
+      } else if (last) {
+        last.lines.push(line);
+      } else {
+        turns.push({ speaker: '', lines: [line] });
+      }
+    }
+  }
+  return turns;
+}
+
+const SPEAKER_COLOR_COUNT = 4;
+
+// Stable per-speaker color index, assigned in order of first appearance.
+function assignSpeakerColors(turns: TranscriptTurn[]): Map<string, number> {
+  const colors = new Map<string, number>();
+  for (const turn of turns) {
+    if (!colors.has(turn.speaker)) {
+      colors.set(turn.speaker, colors.size % SPEAKER_COLOR_COUNT);
+    }
+  }
+  return colors;
+}
+
+function speakerInitials(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 // ─── Meeting Stage ────────────────────────────────────────────────────────────
 function MeetingStage({ leadId }: { leadId: string }) {
   const { data: meeting, isLoading } = useCampaignMeeting(leadId);
@@ -859,9 +924,25 @@ function MeetingStage({ leadId }: { leadId: string }) {
         <div className={styles.insightsSidebar}>
           {/* Header */}
           <div className={styles.sidebarHeader}>
-            <div>
-              <div className={styles.sidebarTitle}>Meeting Insights</div>
-              <div className={styles.sidebarSubtitle}>Transcript &amp; AI analysis</div>
+            <div className={styles.sidebarHeaderMain}>
+              <div className={styles.sidebarHeaderIcon}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <div>
+                <div className={styles.sidebarTitle}>Meeting Insights</div>
+                <div className={styles.sidebarSubtitle}>Transcript &amp; AI analysis</div>
+              </div>
             </div>
             <button className={styles.sidebarClose} onClick={() => setSidebarOpen(false)}>
               <svg
@@ -935,15 +1016,73 @@ function MeetingStage({ leadId }: { leadId: string }) {
               ) : transcript ? (
                 <>
                   <div className={styles.sidebarContentActions}>
-                    <span className={styles.sidebarHint}>Zoom-processed recording</span>
+                    <span className={styles.sidebarHint}>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M23 7l-7 5 7 5V7z" />
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                      </svg>
+                      Zoom-processed recording
+                    </span>
                     <button
                       className={`${styles.btn} ${styles.btnSecondary} ${styles.btnSm}`}
                       onClick={fetchTranscript}
                     >
-                      ↻ Refresh
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="23 4 23 10 17 10" />
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                      </svg>
+                      Refresh
                     </button>
                   </div>
-                  <pre className={styles.transcriptBox}>{transcript}</pre>
+                  {(() => {
+                    const turns = parseTranscript(transcript);
+                    const speakerColors = assignSpeakerColors(turns);
+                    return (
+                      <div className={styles.transcriptThread}>
+                        {turns.map((turn, i) => {
+                          const colorIdx = speakerColors.get(turn.speaker) ?? 0;
+                          return (
+                            <div key={i} className={styles.transcriptTurn}>
+                              <div
+                                className={`${styles.transcriptAvatar} ${styles[`speaker${colorIdx}`]}`}
+                                aria-hidden="true"
+                              >
+                                {speakerInitials(turn.speaker)}
+                              </div>
+                              <div className={styles.transcriptTurnBody}>
+                                <div className={styles.transcriptSpeaker}>
+                                  {turn.speaker || 'Speaker'}
+                                </div>
+                                {turn.lines.map((line, j) => (
+                                  <p key={j} className={styles.transcriptText}>
+                                    {line}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </>
               ) : (
                 <div className={styles.sidebarEmpty}>
@@ -989,12 +1128,40 @@ function MeetingStage({ leadId }: { leadId: string }) {
               ) : report && !('error' in report) ? (
                 <>
                   <div className={styles.sidebarContentActions}>
-                    <span className={styles.sidebarHint}>AI-generated from transcript</span>
+                    <span className={styles.sidebarHint}>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 3a6 6 0 0 0-6 6c0 2 1 3 1 5h10c0-2 1-3 1-5a6 6 0 0 0-6-6z" />
+                        <line x1="9" y1="19" x2="15" y2="19" />
+                      </svg>
+                      AI-generated from transcript
+                    </span>
                     <button
                       className={`${styles.btn} ${styles.btnSecondary} ${styles.btnSm}`}
                       onClick={fetchReport}
                     >
-                      ↻ Regenerate
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="23 4 23 10 17 10" />
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                      </svg>
+                      Regenerate
                     </button>
                   </div>
                   <div className={styles.aiReportBody}>
@@ -2471,6 +2638,31 @@ const STAGE_GROUPS: Record<CampaignLeadStage, string> = {
   complete: 'live',
 };
 
+// Deal-group stages reuse the client-approved roster UI. Negotiation and other
+// communication happen in the conversation thread, so each stage just shows the
+// approved creators plus a notice pointing the user there.
+const DEAL_STAGE_VIEWS: Partial<
+  Record<CampaignLeadStage, { title: string; subtitle: string; notice: string }>
+> = {
+  deal_negotiation: {
+    title: 'Deal Negotiation',
+    subtitle: 'Negotiating deals with the client-approved creators',
+    notice:
+      'Check the conversation for negotiation updates and any communication with the creator.',
+  },
+  deal_closed: {
+    title: 'Deal Closed',
+    subtitle: 'Deals finalized with the client-approved creators',
+    notice:
+      'Check the conversation for the closed deal details and any communication with the creator.',
+  },
+  client_informed: {
+    title: 'Client Informed',
+    subtitle: 'The client has been informed about the closed deals',
+    notice: 'Check the conversation for any communication with the client or creator.',
+  },
+};
+
 interface Props {
   leadId: string;
   activeStage: CampaignLeadStage;
@@ -2491,8 +2683,21 @@ export function StagePanel({ leadId, activeStage }: Props) {
         return <DocumentsStage leadId={leadId} />;
       case 'influencer':
         return <InfluencerDiscovery leadId={leadId} activeStage={activeStage} />;
-      case 'deal':
+      case 'deal': {
+        const dealView = DEAL_STAGE_VIEWS[activeStage];
+        if (dealView) {
+          return (
+            <ClientApprovedView
+              key={activeStage}
+              leadId={leadId}
+              title={dealView.title}
+              subtitle={dealView.subtitle}
+              notice={dealView.notice}
+            />
+          );
+        }
         return <DealStage leadId={leadId} />;
+      }
       case 'content':
         return <ContentReviewStage leadId={leadId} />;
       default:

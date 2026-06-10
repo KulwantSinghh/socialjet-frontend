@@ -188,19 +188,30 @@ function processQueue(error: unknown, token: string | null = null) {
   failedQueue = [];
 }
 
-/**
- * Returns true only when BOTH the localStorage token AND the cookie are absent,
- * meaning the session is truly gone and forcing a logout redirect is correct.
- * If either still exists, the user is still authenticated — a single 401 from a
- * background poll should NOT evict them.
- */
-function isSessionTrulyGone(): boolean {
+/** Auth routes the user should never be redirected away from on a 401 (avoids redirect loops). */
+const AUTH_PAGE_PREFIXES = ['/login', '/forgot-password', '/reset-password'];
+
+/** True when the user is already on an auth page — a 401 there must not trigger another redirect. */
+function isOnAuthPage(): boolean {
   if (typeof window === 'undefined') return true;
-  const lsToken = localStorage.getItem(AUTH_TOKEN_KEY);
-  const cookieToken = document.cookie
-    .split(';')
-    .some((c) => c.trim().startsWith(`${AUTH_TOKEN_KEY}=`));
-  return !lsToken && !cookieToken;
+  return AUTH_PAGE_PREFIXES.some((prefix) => window.location.pathname.startsWith(prefix));
+}
+
+/**
+ * Forces a full logout: clears all session state and hard-redirects to /login.
+ * Debounced via `isForcingLogout` so a burst of concurrent 401s only redirects once.
+ */
+function forceLogoutRedirect() {
+  if (typeof window === 'undefined' || isForcingLogout || isOnAuthPage()) return;
+  isForcingLogout = true;
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_STORE_STORAGE_KEY);
+  clearAuthSessionCookies();
+  // Small delay so React can finish any in-flight renders before the hard redirect.
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 100);
 }
 
 apiClient.interceptors.response.use(
@@ -263,25 +274,12 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
 
-        // Only force a full logout redirect when the session is truly gone (no valid
-        // token in localStorage AND no auth cookie). This prevents a failing background
-        // polling request (e.g. /leads/alerts 401) from evicting an otherwise valid session.
-        // Note: absence of a refresh token alone is NOT sufficient reason to logout —
-        // the user may have logged in without a refresh token and their access token
-        // may still be valid. Only evict when all session tokens are gone.
-        if (typeof window !== 'undefined' && !isForcingLogout && isSessionTrulyGone()) {
-          isForcingLogout = true;
-          localStorage.removeItem(AUTH_TOKEN_KEY);
-          localStorage.removeItem(REFRESH_TOKEN_KEY);
-          localStorage.removeItem(AUTH_STORE_STORAGE_KEY);
-          clearAuthSessionCookies();
-          // Small delay so React can finish any in-flight renders before the hard redirect.
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 100);
-        }
-        // If the session tokens still exist, silently reject — the user stays logged in.
-        // The query will show an error state without destroying the auth session.
+        // The server rejected the access token (401) AND we could not recover a new
+        // one via refresh — the session is no longer valid. Whatever (possibly stale)
+        // token still sits in storage is useless, so evict it and send the user to
+        // /login to re-authenticate. The redirect is debounced and skipped on auth
+        // pages, so a burst of concurrent 401s won't loop or fire repeatedly.
+        forceLogoutRedirect();
 
         return Promise.reject(refreshError);
       } finally {
