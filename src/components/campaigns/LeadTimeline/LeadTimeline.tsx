@@ -36,8 +36,8 @@ const STAGES: TimelineStage[] = [
 
 const STAGE_ORDER = STAGES.map((s) => s.key);
 
-// The lead's `currentStage` (from the API) represents the LAST COMPLETED stage —
-// so it and everything before it are complete, and the NEXT stage is the active one.
+// The lead's `currentStage` (from the API) is the stage it is actually AT —
+// it and everything before it are complete (green); later stages are pending.
 function stageStatus(
   currentStage: CampaignLeadStage,
   itemStage: CampaignLeadStage
@@ -45,7 +45,6 @@ function stageStatus(
   const currentIdx = STAGE_ORDER.indexOf(currentStage);
   const itemIdx = STAGE_ORDER.indexOf(itemStage);
   if (itemIdx <= currentIdx) return 'complete';
-  if (itemIdx === currentIdx + 1) return 'active';
   return 'pending';
 }
 
@@ -78,7 +77,7 @@ export function LeadTimeline({ currentStage, activeStage, onSelectStage, stageDa
                 onClick={() => onSelectStage(item.key)}
               >
                 <div
-                  className={`${styles.dot} ${status === 'complete' ? styles.dotComplete : status === 'active' ? styles.dotActive : styles.dotPending}`}
+                  className={`${styles.dot} ${status === 'complete' ? styles.dotComplete : styles.dotPending}`}
                 >
                   {status === 'complete' && (
                     <svg
@@ -93,7 +92,6 @@ export function LeadTimeline({ currentStage, activeStage, onSelectStage, stageDa
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   )}
-                  {status === 'active' && <div className={styles.pulseRing} />}
                 </div>
                 <div className={styles.itemContent}>
                   <div

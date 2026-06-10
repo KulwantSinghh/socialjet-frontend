@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { use } from 'react';
+import { toast } from 'sonner';
 import styles from './page.module.css';
 import { useCampaignLeadDetail } from '@/hooks/useCampaignLeads';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole } from '@/types/roles.types';
 import { LeadTimeline } from '@/components/campaigns/LeadTimeline';
 import { StagePanel } from '@/components/campaigns/StagePanel';
-import { ChatSlideIn } from '@/components/campaigns/ChatSlideIn';
 import { AssignModal } from '@/components/campaigns/AssignModal';
 import type { CampaignLeadStage } from '@/types/campaign.types';
 
@@ -20,52 +20,24 @@ interface Props {
 export default function LeadDetailPage({ params }: Props) {
   const { leadId } = use(params);
   const { data: lead, isLoading } = useCampaignLeadDetail(leadId);
-  const [chatOpen, setChatOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const role = useAuthStore((s) => s.role);
   const isLead = role === UserRole.CampaignManagerLead;
 
   const currentStage: CampaignLeadStage = lead?.stage ?? 'unassigned';
 
-  // The API stage is the last COMPLETED stage — auto-advance the panel to the
-  // next actionable stage so the CM lands on what they need to do next.
-  const NEXT_STAGE: Partial<Record<CampaignLeadStage, CampaignLeadStage>> = {
-    unassigned: 'assigned',
-    assigned: 'questionnaire_sent',
-    questionnaire_sent: 'questionnaire_received',
-    questionnaire_received: 'meeting_booked',
-    meeting_booked: 'meeting_done',
-    meeting_done: 'documents_generated',
-    documents_generated: 'documents_cm_approved',
-    documents_cm_approved: 'documents_admin_approved',
-    documents_admin_approved: 'documents_sent_to_client',
-    documents_sent_to_client: 'influencer_selection',
-    influencer_selection: 'influencer_cm_approved',
-    influencer_cm_approved: 'influencer_client_approved',
-    influencer_client_approved: 'deal_negotiation',
-    deal_negotiation: 'deal_closed',
-    deal_closed: 'client_informed',
-    client_informed: 'content_review',
-    content_review: 'content_cm_approved',
-    content_cm_approved: 'content_client_approved',
-    content_client_approved: 'publish_date_assigned',
-    publish_date_assigned: 'live',
-    live: 'complete',
-  };
-  const nextStageOf = (stage: CampaignLeadStage): CampaignLeadStage => NEXT_STAGE[stage] ?? stage;
-
-  // `activeStage` is the panel the user is viewing. It starts at the next
-  // actionable stage and re-syncs whenever the lead's real stage changes
-  // (e.g. on refresh or after an action advances the stage). User clicks override it.
+  // `activeStage` is the panel the user is viewing. It defaults to the lead's
+  // actual stage (the one named by the API) and re-syncs whenever that stage
+  // changes — e.g. when polling picks up a backend advance. User clicks override it.
   const [activeStage, setActiveStage] = useState<CampaignLeadStage | null>(null);
   const [syncedStage, setSyncedStage] = useState<CampaignLeadStage | null>(null);
 
   if (lead && lead.stage !== syncedStage) {
     setSyncedStage(lead.stage);
-    setActiveStage(nextStageOf(lead.stage));
+    setActiveStage(lead.stage);
   }
 
-  const effectiveActiveStage = activeStage ?? nextStageOf(currentStage);
+  const effectiveActiveStage = activeStage ?? currentStage;
 
   function getInitials(name: string) {
     return name
@@ -139,7 +111,7 @@ export default function LeadDetailPage({ params }: Props) {
               {lead.assignedTo ? 'Reassign CM' : 'Assign CM'}
             </button>
           )}
-          <button className={styles.messageBtn} onClick={() => setChatOpen(true)}>
+          <button className={styles.messageBtn} onClick={() => toast('Under Development')}>
             <svg
               width="14"
               height="14"
@@ -174,15 +146,6 @@ export default function LeadDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Chat slide-in */}
-      {lead && (
-        <ChatSlideIn
-          leadId={leadId}
-          clientName={lead.clientName}
-          isOpen={chatOpen}
-          onClose={() => setChatOpen(false)}
-        />
-      )}
       {assignOpen && lead && <AssignModal lead={lead} onClose={() => setAssignOpen(false)} />}
     </div>
   );

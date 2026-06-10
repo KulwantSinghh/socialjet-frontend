@@ -24,6 +24,9 @@ export function useCampaignLeadDetail(id: string) {
     queryFn: () => campaignsService.getLeadDetail(id),
     staleTime: 10_000,
     enabled: !!id,
+    // Auto-update the lead's stage without a manual page refresh.
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 }
 
