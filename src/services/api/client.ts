@@ -20,6 +20,26 @@ const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 const ADMIN_VIEW_ONLY_PREFIXES = ['/sales', '/campaigns'];
 
 /**
+ * Mutations an admin IS allowed to perform even on the view-only team pages.
+ * Currently: accepting/rejecting AI-recommended creators on the Influencer
+ * Discovery view (PATCH /recommendations/{id}/decision).
+ */
+const ADMIN_ALLOWED_MUTATIONS: Array<{ method: string; pattern: RegExp }> = [
+  { method: 'patch', pattern: /^\/recommendations\/[^/]+\/decision\/?$/ },
+];
+
+function isAdminAllowedMutation(method: string, url: string): boolean {
+  // Normalize to a path relative to the API base (config.url is usually relative already).
+  let path = url.split('?')[0];
+  if (path.startsWith('http')) {
+    const basePath = new URL(API_BASE_URL).pathname.replace(/\/$/, '');
+    path = new URL(path).pathname;
+    if (basePath && path.startsWith(basePath)) path = path.slice(basePath.length);
+  }
+  return ADMIN_ALLOWED_MUTATIONS.some((rule) => rule.method === method && rule.pattern.test(path));
+}
+
+/**
  * Admins can monitor every part of the Sales and Campaign teams via the real
  * /sales and /campaigns pages, but must not be able to change anything there.
  * This blocks any mutating request that originates while an admin is viewing one
@@ -30,6 +50,9 @@ function isAdminViewOnlyBlocked(config: InternalAxiosRequestConfig): boolean {
 
   const method = (config.method ?? 'get').toLowerCase();
   if (!MUTATING_METHODS.has(method)) return false;
+
+  // Specific actions admins may perform even on monitored team pages.
+  if (isAdminAllowedMutation(method, config.url ?? '')) return false;
 
   // Scope the guard to the monitored team pages only (admin keeps full control elsewhere).
   const pathname = window.location.pathname;
