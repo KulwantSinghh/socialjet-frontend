@@ -17,6 +17,8 @@ import type { SalesAnalysis } from '@/types/intelligence.types';
 import { MEETING_TYPE_LABELS } from '@/types/meeting.types';
 import { TIMELINE_EVENT_LABELS } from '@/types/timeline.types';
 import { generateProposalHTML, generateProposalPageHTML } from '@/lib/generateProposalHTML';
+import { DealDetailsModal } from '@/components/shared/DealDetailsModal';
+import { useDealDetails } from '@/hooks/useDealDetails';
 
 // ─── Journey stages ───────────────────────────────────────────────────────────
 const JOURNEY_STAGES = [
@@ -1155,6 +1157,10 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
   );
   const [transcriptMeeting, setTranscriptMeeting] = useState<Meeting | null>(null);
   const [showBookModal, setShowBookModal] = useState(false);
+  const [showDealDetailsModal, setShowDealDetailsModal] = useState(false);
+
+  const { data: dealDetails, isLoading: dealDetailsLoading } = useDealDetails(leadId);
+  const dealDetailsMissing = !dealDetailsLoading && !dealDetails;
 
   const { data: lead, isLoading: leadLoading } = useQuery<Lead>({
     queryKey: ['lead', leadId],
@@ -1320,6 +1326,41 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
                 <span className={styles.statLabel}>Analysis</span>
               </div>
             </div>
+
+            <div className={styles.sidebarDivider} />
+
+            {/* Deal details */}
+            <button
+              type="button"
+              className={cn(
+                styles.dealDetailsBtn,
+                dealDetailsMissing && styles.dealDetailsBtnMissing
+              )}
+              onClick={() => setShowDealDetailsModal(true)}
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="11" x2="12" y2="17" />
+                <line x1="9" y1="14" x2="15" y2="14" />
+              </svg>
+              {dealDetailsMissing ? 'Lead Details' : 'Edit Lead Details'}
+              {dealDetailsMissing && <span className={styles.dealDetailsDot} aria-hidden />}
+            </button>
+            {dealDetailsMissing && (
+              <p className={styles.dealDetailsHint}>
+                Deal details are required before this lead can be closed.
+              </p>
+            )}
 
             <div className={styles.sidebarDivider} />
 
@@ -1543,6 +1584,12 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
       {showBookModal && (
         <BookMeetingModal leadId={leadId} onClose={() => setShowBookModal(false)} />
       )}
+      <DealDetailsModal
+        open={showDealDetailsModal}
+        onClose={() => setShowDealDetailsModal(false)}
+        leadId={leadId}
+        leadName={lead.name}
+      />
     </div>
   );
 }

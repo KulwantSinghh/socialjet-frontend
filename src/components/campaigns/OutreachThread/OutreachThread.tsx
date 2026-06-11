@@ -10,7 +10,6 @@ import {
   useNegotiate,
   useRejectMessage,
   useReply,
-  useSendBrief,
   useSendMessage,
   useSyncReplies,
   useUpdateNegotiationStatus,
@@ -42,7 +41,6 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
   const { messages, isLoading, emailFetchedAt } = useCreatorConversation(leadId, creatorId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const sendBrief = useSendBrief(leadId, creatorId);
   const updateStatus = useUpdateNegotiationStatus(leadId, creatorId);
 
   // Step 5 — Negotiation. When a creator reply lands, the backend generates a
@@ -99,8 +97,6 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
   }, [emailFetchedAt, qc]);
 
   const statusMeta = negotiationStatusMeta(creator.negotiation_status);
-  const canSendBrief =
-    creator.negotiation_status === 'interested' || creator.negotiation_status === 'confirmed';
 
   return (
     <div className={styles.root}>
@@ -148,18 +144,6 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
 
       {/* Action bar */}
       <div className={styles.actionBar}>
-        <button
-          className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-          disabled={!canSendBrief || sendBrief.isPending}
-          title={
-            canSendBrief
-              ? 'Send the KOL brief to this creator'
-              : 'Available once interested/confirmed'
-          }
-          onClick={() => sendBrief.mutate()}
-        >
-          {sendBrief.isPending ? 'Sending brief…' : 'Send KOL Brief'}
-        </button>
         <label className={styles.statusSelect}>
           <span>Status</span>
           <select
@@ -176,7 +160,6 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
             ))}
           </select>
         </label>
-        {sendBrief.isSuccess && <span className={styles.flashOk}>Brief sent ✓</span>}
       </div>
 
       {/* Messages */}

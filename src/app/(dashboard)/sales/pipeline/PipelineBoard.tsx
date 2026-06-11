@@ -1,8 +1,12 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { useLeads, useUpdateLeadStatus } from '@/hooks/useLeads';
+import { useDealDetailsStatuses } from '@/hooks/useDealDetails';
+import { dealDetailsService } from '@/services/dealDetails.service';
+import { DealDetailsModal } from '@/components/shared/DealDetailsModal';
 import type { Lead } from '@/types/leads.types';
 import styles from './PipelineBoard.module.css';
 import { cn } from '@/lib/utils';
@@ -110,16 +114,20 @@ function LeadCard({
   lead,
   editMode,
   isDragging,
+  dealStatus,
   onClick,
   onDragStart,
   onDragEnd,
+  onOpenDealDetails,
 }: {
   lead: Lead;
   editMode: boolean;
   isDragging: boolean;
+  dealStatus?: 'missing' | 'filled';
   onClick: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
+  onOpenDealDetails: () => void;
 }) {
   const days = daysSince(lead.updated_at);
   const srcLabel = SOURCE_LABELS[lead.source] ?? lead.source;
@@ -130,7 +138,8 @@ function LeadCard({
       className={cn(
         styles.card,
         editMode && styles.cardEditable,
-        isDragging && styles.cardDragging
+        isDragging && styles.cardDragging,
+        dealStatus === 'missing' && styles.cardNeedsDetails
       )}
       draggable={editMode}
       onDragStart={editMode ? onDragStart : undefined}
@@ -195,6 +204,60 @@ function LeadCard({
           <span className={styles.dealValue}>${Number(lead.deal_value).toLocaleString()}</span>
         )}
       </div>
+
+      {dealStatus === 'missing' && (
+        <button
+          type="button"
+          className={styles.dealMissingBadge}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDealDetails();
+          }}
+          title="Deal details are required before this lead can move to Closed Won"
+        >
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          Deal details missing — fill now
+        </button>
+      )}
+      {dealStatus === 'filled' && (
+        <button
+          type="button"
+          className={styles.dealFilledBadge}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDealDetails();
+          }}
+          title="View the saved deal details for this lead"
+        >
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          Deal details — view
+        </button>
+      )}
     </div>
   );
 }
@@ -205,19 +268,23 @@ function Column({
   leads,
   editMode,
   draggingId,
+  dealFilledMap,
   onCardClick,
   onDragStart,
   onDragEnd,
   onDrop,
+  onFillDealDetails,
 }: {
   col: (typeof COLUMNS)[number];
   leads: Lead[];
   editMode: boolean;
   draggingId: string | null;
+  dealFilledMap: Record<string, boolean>;
   onCardClick: (id: string) => void;
   onDragStart: (e: React.DragEvent, leadId: string) => void;
   onDragEnd: () => void;
   onDrop: (colKey: ColKey) => void;
+  onFillDealDetails: (lead: Lead) => void;
 }) {
   const [isOver, setIsOver] = useState(false);
 
@@ -270,9 +337,17 @@ function Column({
               lead={lead}
               editMode={editMode}
               isDragging={draggingId === lead.lead_id}
+              dealStatus={
+                dealFilledMap[lead.lead_id] === undefined
+                  ? undefined
+                  : dealFilledMap[lead.lead_id]
+                    ? 'filled'
+                    : 'missing'
+              }
               onClick={() => onCardClick(lead.lead_id)}
               onDragStart={(e) => onDragStart(e, lead.lead_id)}
               onDragEnd={onDragEnd}
+              onOpenDealDetails={() => onFillDealDetails(lead)}
             />
           ))
         )}
@@ -292,8 +367,24 @@ export function PipelineBoard() {
   const [editMode, setEditMode] = useState(false);
   const [localLeads, setLocalLeads] = useState<Lead[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dealModalLead, setDealModalLead] = useState<Lead | null>(null);
 
   const serverLeads = data?.leads;
+
+  // Deal-details completion is tracked (and polled) for leads in the Meeting
+  // and Proposal columns (the ones approaching Closed Won) and in Closed Won
+  // itself, so saved details stay viewable from the board.
+  const gateLeadIds = useMemo(
+    () =>
+      localLeads
+        .filter((l) => {
+          const key = getColKey(l);
+          return key === 'meeting' || key === 'proposal' || key === 'closed';
+        })
+        .map((l) => l.lead_id),
+    [localLeads]
+  );
+  const dealFilledMap = useDealDetailsStatuses(gateLeadIds);
 
   // Sync local leads from server when not in edit mode (or on first load)
   useEffect(() => {
@@ -326,6 +417,31 @@ export function PipelineBoard() {
 
       const newStatus = targetCol.dropStatus;
       const newPipelineStatus = targetCol.pipelineStatuses[0];
+
+      // Closed Won is gated: deal details must be filled first.
+      if (targetColKey === 'closed') {
+        setDraggingId(null);
+        let details = null;
+        let blockMessage = `Deal details are missing for "${lead.name}". Fill the Lead Details form before moving this lead to Closed Won.`;
+        try {
+          details = await dealDetailsService.get(lead.lead_id);
+        } catch (err: unknown) {
+          const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data
+            ?.detail;
+          if (typeof detail === 'string') blockMessage = detail;
+        }
+        if (!details) {
+          dragLeadIdRef.current = null;
+          toast.error(blockMessage, {
+            id: `deal-details-gate-${lead.lead_id}`,
+            action: {
+              label: 'Fill now',
+              onClick: () => setDealModalLead(lead),
+            },
+          });
+          return;
+        }
+      }
 
       // Optimistic update — must update both fields because getColKey prefers pipeline_status
       setLocalLeads((prev) =>
@@ -454,14 +570,23 @@ export function PipelineBoard() {
               leads={grouped[col.key] ?? []}
               editMode={editMode}
               draggingId={draggingId}
+              dealFilledMap={dealFilledMap}
               onCardClick={(id) => router.push(`/sales/leads/${id}`)}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onDrop={handleDrop}
+              onFillDealDetails={setDealModalLead}
             />
           ))}
         </div>
       )}
+
+      <DealDetailsModal
+        open={!!dealModalLead}
+        onClose={() => setDealModalLead(null)}
+        leadId={dealModalLead?.lead_id ?? ''}
+        leadName={dealModalLead?.name}
+      />
     </div>
   );
 }

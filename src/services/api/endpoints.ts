@@ -123,6 +123,7 @@ export const ENDPOINTS = {
       `/campaign-creators/${leadId}/${creatorId}/deal`,
     SEND_TO_CLIENT: (leadId: string) => `/campaign-creators/${leadId}/send-to-client`,
     CLIENT_APPROVED: (leadId: string) => `/campaign-creators/${leadId}/client-approved`,
+    DEAL_DETAILS: (leadId: string) => `/campaign-creators/${leadId}/deal-details`,
   },
 
   CAMPAIGN_CONTENT: {
