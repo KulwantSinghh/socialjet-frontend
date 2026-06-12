@@ -381,12 +381,26 @@ export interface ShortlistStats {
   can_proceed_to_outreach: boolean;
 }
 
+/**
+ * Where a submitted content link is hosted. Socials play via their official
+ * embeds; 'gdrive' via the Drive preview iframe; 'other' covers direct video
+ * files / cloud storage URLs played with a native <video> element.
+ */
+export type ContentPlatform = InfluencerPlatform | 'gdrive' | 'other';
+
+/** Payload row for submitting creator content links. */
+export interface ContentLinkInput {
+  url: string;
+  platform: ContentPlatform;
+  caption?: string;
+}
+
 export interface ContentItem {
   id: string;
   influencerId: string;
   influencerName: string;
   influencerAvatar?: string;
-  platform: InfluencerPlatform;
+  platform: ContentPlatform;
   contentUrl: string;
   thumbnail?: string;
   caption?: string;

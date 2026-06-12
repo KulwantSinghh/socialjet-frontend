@@ -10,6 +10,7 @@ import type {
   CampaignInfluencer,
   Influencer,
   ContentItem,
+  ContentLinkInput,
   ApprovalItem,
   InboxConversation,
   InboxMessage,
@@ -142,14 +143,24 @@ function mapCampaignInfluencer(raw: Record<string, unknown>): CampaignInfluencer
   };
 }
 
+const CONTENT_PLATFORMS: ContentItem['platform'][] = [
+  'instagram',
+  'tiktok',
+  'youtube',
+  'gdrive',
+  'other',
+];
+
 function mapContent(raw: Record<string, unknown>): ContentItem {
   return {
     id: (raw.content_id ?? raw.id) as string,
     influencerId: (raw.creator_id ?? '') as string,
     influencerName: (raw.creator_name ?? '') as string,
     influencerAvatar: raw.creator_avatar as string | undefined,
-    platform: raw.platform as ContentItem['platform'],
-    contentUrl: raw.content_url as string,
+    platform: CONTENT_PLATFORMS.includes(raw.platform as ContentItem['platform'])
+      ? (raw.platform as ContentItem['platform'])
+      : 'other',
+    contentUrl: (raw.content_url ?? raw.url ?? '') as string,
     thumbnail: raw.thumbnail as string | undefined,
     caption: raw.caption as string | undefined,
     status: (raw.status ?? 'pending') as ContentStatus,
@@ -586,24 +597,6 @@ export const campaignsService = {
   },
 
   // Content
-  getContent: async (leadId: string): Promise<ContentItem[]> => {
-    const { data } = await apiClient.get(ENDPOINTS.CAMPAIGN_CONTENT.LIST(leadId));
-    const list: Record<string, unknown>[] = Array.isArray(data) ? data : (data.content ?? []);
-    return list.map(mapContent);
-  },
-
-  updateContentStatus: async (
-    leadId: string,
-    contentId: string,
-    status: ContentStatus,
-    note?: string
-  ): Promise<void> => {
-    await apiClient.patch(ENDPOINTS.CAMPAIGN_CONTENT.UPDATE_STATUS(leadId, contentId), {
-      status,
-      note,
-    });
-  },
-
   scheduleContent: async (
     leadId: string,
     contentId: string,
@@ -611,6 +604,38 @@ export const campaignsService = {
   ): Promise<void> => {
     await apiClient.patch(ENDPOINTS.CAMPAIGN_CONTENT.SCHEDULE(leadId, contentId), {
       scheduled_at: scheduledAt,
+    });
+  },
+
+  // Per-creator content links
+  getContentLinks: async (leadId: string, creatorId: string): Promise<ContentItem[]> => {
+    const { data } = await apiClient.get(ENDPOINTS.CAMPAIGN_CONTENT.LINKS(leadId, creatorId));
+    const list: Record<string, unknown>[] = Array.isArray(data)
+      ? data
+      : (data.links ?? data.content ?? []);
+    return list.map((raw) => {
+      const item = mapContent(raw);
+      return { ...item, influencerId: item.influencerId || creatorId };
+    });
+  },
+
+  submitContentLinks: async (
+    leadId: string,
+    creatorId: string,
+    links: ContentLinkInput[]
+  ): Promise<void> => {
+    await apiClient.post(ENDPOINTS.CAMPAIGN_CONTENT.LINKS(leadId, creatorId), { links });
+  },
+
+  cmReviewContentLink: async (
+    leadId: string,
+    contentId: string,
+    status: 'cm_approved' | 'cm_rejected',
+    note?: string
+  ): Promise<void> => {
+    await apiClient.patch(ENDPOINTS.CAMPAIGN_CONTENT.CM_REVIEW(leadId, contentId), {
+      status,
+      ...(note ? { note } : {}),
     });
   },
 

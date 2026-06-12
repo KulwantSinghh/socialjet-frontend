@@ -26,6 +26,8 @@ export const outreachKeys = {
     [...outreachKeys.all, 'thread', leadId, creatorId] as const,
   emailThread: (leadId: string, creatorId: string) =>
     [...outreachKeys.all, 'email-thread', leadId, creatorId] as const,
+  negotiationStatus: (leadId: string, creatorId: string) =>
+    [...outreachKeys.all, 'negotiation-status', leadId, creatorId] as const,
   analytics: (leadId: string) => [...outreachKeys.all, 'analytics', leadId] as const,
   summary: (leadId: string) => [...outreachKeys.all, 'summary', leadId] as const,
   clientApproved: (leadId: string) => [...outreachKeys.all, 'client-approved', leadId] as const,
@@ -161,6 +163,7 @@ function useThreadInvalidation(leadId: string, creatorId: string) {
   return () => {
     qc.invalidateQueries({ queryKey: outreachKeys.thread(leadId, creatorId) });
     qc.invalidateQueries({ queryKey: outreachKeys.emailThread(leadId, creatorId) });
+    qc.invalidateQueries({ queryKey: outreachKeys.negotiationStatus(leadId, creatorId) });
     qc.invalidateQueries({ queryKey: outreachKeys.inbox() });
     qc.invalidateQueries({ queryKey: outreachKeys.analytics(leadId) });
     qc.invalidateQueries({ queryKey: outreachKeys.summary(leadId) });
@@ -251,6 +254,16 @@ export function useOptIn(leadId: string, creatorId: string) {
   return useMutation({
     mutationFn: (payload: OptInRequest) => outreachService.optIn(leadId, creatorId, payload),
     onSuccess: invalidate,
+  });
+}
+
+export function useNegotiationStatus(leadId: string | undefined, creatorId: string | undefined) {
+  return useQuery({
+    queryKey: outreachKeys.negotiationStatus(leadId ?? '', creatorId ?? ''),
+    queryFn: () => outreachService.getNegotiationStatus(leadId!, creatorId!),
+    enabled: !!leadId && !!creatorId,
+    staleTime: 10_000,
+    refetchInterval: 10_000,
   });
 }
 

@@ -131,6 +131,10 @@ export const ENDPOINTS = {
     SUBMIT: (leadId: string) => `/content/${leadId}`,
     UPDATE_STATUS: (leadId: string, contentId: string) => `/content/${leadId}/${contentId}/status`,
     SCHEDULE: (leadId: string, contentId: string) => `/content/${leadId}/${contentId}/schedule`,
+    // Per-creator content links (GET = list, POST = submit batch)
+    LINKS: (leadId: string, creatorId: string) => `/content/${leadId}/${creatorId}/links`,
+    CM_REVIEW: (leadId: string, contentId: string) =>
+      `/content/${leadId}/links/${contentId}/cm-review`,
   },
 
   CAMPAIGN_INBOX: {

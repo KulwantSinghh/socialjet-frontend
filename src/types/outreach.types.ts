@@ -246,6 +246,16 @@ export interface UpdateNegotiationStatusRequest {
   negotiation_status: NegotiationStatus;
 }
 
+export interface NegotiationStatusResponse {
+  lead_id: string;
+  creator_id: string;
+  negotiation_status: NegotiationStatus;
+  negotiation_round: number;
+  last_offer_amount: string | null;
+  last_offer_percentage: string | null;
+  updated_at: string;
+}
+
 // ── Client-approved creators (5.1) ────────────────────────────────────────
 
 export interface ClientApprovedCreatorProfile {

@@ -14,13 +14,19 @@ import {
   useCampaignDocuments,
   useKolBrief,
   useLeadInfluencers,
-  useLeadContent,
   useCampaignLeadDetail,
   useCampaignManagers,
   CAMPAIGN_LEADS_KEY,
 } from '@/hooks/useCampaignLeads';
+import {
+  contentLinksKeys,
+  useCmReviewContentLink,
+  useLeadContentLinks,
+} from '@/hooks/useContentLinks';
+import { ContentLinkCard } from '@/components/campaigns/ContentLinkCard';
 import { campaignsService } from '@/services/campaigns.service';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type {
   CampaignLeadStage,
   OnboardingDocument,
@@ -2487,12 +2493,26 @@ function DealStage({ leadId }: { leadId: string }) {
 
 // ─── Content Review Stage ─────────────────────────────────────────────────────
 function ContentReviewStage({ leadId }: { leadId: string }) {
-  const { data: content, isLoading } = useLeadContent(leadId);
+  const { links, isLoading } = useLeadContentLinks(leadId);
+  const review = useCmReviewContentLink(leadId);
   const qc = useQueryClient();
 
-  async function updateStatus(contentId: string, status: 'cm_approved' | 'cm_rejected') {
-    await campaignsService.updateContentStatus(leadId, contentId, status);
-    qc.invalidateQueries({ queryKey: ['lead-content', leadId] });
+  function handleReview(contentId: string, status: 'cm_approved' | 'cm_rejected', note?: string) {
+    review.mutate(
+      { contentId, status, note },
+      {
+        onSuccess: () =>
+          toast.success(status === 'cm_approved' ? 'Content approved' : 'Content rejected'),
+        onError: () => toast.error('Couldn’t update the review. Please try again.'),
+      }
+    );
+  }
+
+  async function assignPublishDate(contentId: string) {
+    const date = prompt('Enter publish date & time (YYYY-MM-DD HH:MM)');
+    if (!date) return;
+    await campaignsService.scheduleContent(leadId, contentId, date);
+    qc.invalidateQueries({ queryKey: contentLinksKeys.all(leadId) });
   }
 
   if (isLoading) return <StageSkeleton />;
@@ -2504,77 +2524,28 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
       </div>
       <div className={styles.stageBody}>
         <div className={styles.contentGrid}>
-          {(content ?? []).map((item) => (
-            <div key={item.id} className={styles.contentCard}>
-              <div className={styles.contentThumb}>
-                <svg
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                >
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-              </div>
-              <div className={styles.contentInfo}>
-                <div className={styles.contentMeta}>
-                  <span className={styles.contentInfluencer}>{item.influencerName}</span>
-                  <span
-                    className={`${styles.platformBadge} ${styles[`platform${item.platform.charAt(0).toUpperCase() + item.platform.slice(1)}` as keyof typeof styles]}`}
-                  >
-                    {item.platform}
-                  </span>
-                </div>
-                <a
-                  href={item.contentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={styles.contentLink}
-                >
-                  {item.contentUrl}
-                </a>
-                <span
-                  className={`${styles.statusBadge} ${styles[`status${item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase())}` as keyof typeof styles] ?? styles.statusPending}`}
-                  style={{ alignSelf: 'flex-start', marginTop: 4 }}
-                >
-                  {item.status.replace(/_/g, ' ')}
-                </span>
-              </div>
-              {item.status === 'submitted' && (
-                <div className={styles.contentActions}>
-                  <button
-                    className={`${styles.btn} ${styles.btnSuccess} ${styles.btnSm}`}
-                    onClick={() => updateStatus(item.id, 'cm_approved')}
-                  >
-                    Approve
-                  </button>
-                  <button
-                    className={`${styles.btn} ${styles.btnDanger} ${styles.btnSm}`}
-                    onClick={() => updateStatus(item.id, 'cm_rejected')}
-                  >
-                    Reject
-                  </button>
-                </div>
-              )}
-              {item.status === 'cm_approved' && (
-                <div className={styles.contentActions}>
+          {links.map((item) => (
+            <ContentLinkCard
+              key={item.id}
+              item={item}
+              showCreator
+              canReview
+              reviewPending={review.isPending}
+              onReview={(status, note) => handleReview(item.id, status, note)}
+              footer={
+                item.status === 'cm_approved' ? (
                   <button
                     className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
                     style={{ flex: 1 }}
-                    onClick={() => {
-                      const date = prompt('Enter publish date & time (YYYY-MM-DD HH:MM)');
-                      if (date) campaignsService.scheduleContent(leadId, item.id, date);
-                    }}
+                    onClick={() => assignPublishDate(item.id)}
                   >
                     Assign Publish Date
                   </button>
-                </div>
-              )}
-            </div>
+                ) : undefined
+              }
+            />
           ))}
-          {!content?.length && (
+          {!links.length && (
             <div
               style={{
                 color: 'var(--color-text-tertiary)',
@@ -2584,7 +2555,8 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
                 gridColumn: '1 / -1',
               }}
             >
-              No content submitted yet. Influencers can share their content links via Inbox.
+              No content submitted yet. Submit the creators’ video links from their Inbox
+              conversations.
             </div>
           )}
         </div>

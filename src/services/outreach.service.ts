@@ -10,6 +10,7 @@ import type {
   GenerateOutreachRequest,
   NegotiateRequest,
   NegotiateResponse,
+  NegotiationStatusResponse,
   NegotiationSummary,
   OptInRequest,
   OutreachAnalytics,
@@ -166,6 +167,15 @@ export const outreachService = {
     payload: OptInRequest
   ): Promise<{ success: boolean }> => {
     const { data } = await apiClient.patch(ENDPOINTS.OUTREACH.OPT_IN(leadId, creatorId), payload);
+    return data;
+  },
+
+  // 5.9 — current negotiation status for a creator on a lead
+  getNegotiationStatus: async (
+    leadId: string,
+    creatorId: string
+  ): Promise<NegotiationStatusResponse> => {
+    const { data } = await apiClient.get(ENDPOINTS.OUTREACH.NEGOTIATION_STATUS(leadId, creatorId));
     return data;
   },
 

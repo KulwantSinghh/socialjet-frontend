@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import styles from './OutreachThread.module.css';
+import { CreatorContentSection } from '@/components/campaigns/CreatorContentSection';
 import {
   outreachKeys,
   useApproveMessage,
   useCreatorConversation,
   useNegotiate,
+  useNegotiationStatus,
   useRejectMessage,
   useReply,
   useSendMessage,
@@ -42,6 +44,11 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const updateStatus = useUpdateNegotiationStatus(leadId, creatorId);
+
+  // Live negotiation status from the backend — the inbox payload only carries
+  // a snapshot, so the dropdown reflects this query, not the stale prop.
+  const { data: negotiation } = useNegotiationStatus(leadId, creatorId);
+  const negotiationStatus = negotiation?.negotiation_status ?? creator.negotiation_status;
 
   // Step 5 — Negotiation. When a creator reply lands, the backend generates a
   // counter-offer draft. `creator_reply` is taken from the synced inbound
@@ -96,7 +103,7 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
     }
   }, [emailFetchedAt, qc]);
 
-  const statusMeta = negotiationStatusMeta(creator.negotiation_status);
+  const statusMeta = negotiationStatusMeta(negotiationStatus);
 
   return (
     <div className={styles.root}>
@@ -147,7 +154,7 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
         <label className={styles.statusSelect}>
           <span>Status</span>
           <select
-            value={creator.negotiation_status}
+            value={negotiationStatus}
             onChange={(e) =>
               updateStatus.mutate({ negotiation_status: e.target.value as NegotiationStatus })
             }
@@ -160,6 +167,12 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
             ))}
           </select>
         </label>
+        {/* Creator content lives in a slide-over so the thread stays clean */}
+        <CreatorContentSection
+          leadId={leadId}
+          creatorId={creatorId}
+          creatorName={creator.creator_name}
+        />
       </div>
 
       {/* Messages */}

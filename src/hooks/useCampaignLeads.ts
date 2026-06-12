@@ -233,15 +233,6 @@ export function useAllInfluencers(params?: { search?: string; platform?: string;
   });
 }
 
-export function useLeadContent(leadId: string) {
-  return useQuery({
-    queryKey: ['lead-content', leadId],
-    queryFn: () => campaignsService.getContent(leadId),
-    staleTime: 10_000,
-    enabled: !!leadId,
-  });
-}
-
 export function useCampaignApprovals() {
   return useQuery({
     queryKey: ['campaign-approvals'],
