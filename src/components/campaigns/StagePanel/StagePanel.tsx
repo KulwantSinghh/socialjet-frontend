@@ -2508,11 +2508,19 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
     );
   }
 
-  async function assignPublishDate(contentId: string) {
-    const date = prompt('Enter publish date & time (YYYY-MM-DD HH:MM)');
-    if (!date) return;
-    await campaignsService.scheduleContent(leadId, contentId, date);
-    qc.invalidateQueries({ queryKey: contentLinksKeys.all(leadId) });
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
+
+  async function assignPublishDate(contentId: string, scheduledAt: string) {
+    setSchedulingId(contentId);
+    try {
+      await campaignsService.scheduleContent(leadId, contentId, scheduledAt);
+      qc.invalidateQueries({ queryKey: contentLinksKeys.all(leadId) });
+      toast.success('Publish date scheduled');
+    } catch {
+      toast.error('Couldn’t schedule the publish date. Please try again.');
+    } finally {
+      setSchedulingId(null);
+    }
   }
 
   if (isLoading) return <StageSkeleton />;
@@ -2532,17 +2540,9 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
               canReview
               reviewPending={review.isPending}
               onReview={(status, note) => handleReview(item.id, status, note)}
-              footer={
-                item.status === 'cm_approved' ? (
-                  <button
-                    className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSm}`}
-                    style={{ flex: 1 }}
-                    onClick={() => assignPublishDate(item.id)}
-                  >
-                    Assign Publish Date
-                  </button>
-                ) : undefined
-              }
+              canSchedule
+              schedulePending={schedulingId === item.id}
+              onSchedule={(scheduledAt) => assignPublishDate(item.id, scheduledAt)}
             />
           ))}
           {!links.length && (
