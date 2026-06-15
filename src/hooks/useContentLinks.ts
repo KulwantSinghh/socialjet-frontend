@@ -1,7 +1,11 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { campaignsService } from '@/services/campaigns.service';
 import { useClientApprovedCreators } from '@/hooks/useCampaignLeads';
-import type { ContentItem, ContentLinkInput } from '@/types/campaign.types';
+import type {
+  ContentItem,
+  ContentLinkInput,
+  SendScheduleEmailsPayload,
+} from '@/types/campaign.types';
 
 export const contentLinksKeys = {
   all: (leadId: string) => ['content-links', leadId] as const,
@@ -83,5 +87,12 @@ export function useCmReviewContentLink(leadId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: contentLinksKeys.all(leadId) });
     },
+  });
+}
+
+export function useSendScheduleEmails(leadId: string) {
+  return useMutation({
+    mutationFn: (payload: SendScheduleEmailsPayload) =>
+      campaignsService.sendScheduleEmails(leadId, payload),
   });
 }

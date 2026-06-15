@@ -16,14 +16,18 @@ import {
   useLeadInfluencers,
   useCampaignLeadDetail,
   useCampaignManagers,
+  useClientApprovedCreators,
   CAMPAIGN_LEADS_KEY,
 } from '@/hooks/useCampaignLeads';
 import {
   contentLinksKeys,
   useCmReviewContentLink,
   useLeadContentLinks,
+  useSendScheduleEmails,
 } from '@/hooks/useContentLinks';
 import { ContentLinkCard } from '@/components/campaigns/ContentLinkCard';
+import { SendScheduleEmailsModal } from '@/components/campaigns/SendScheduleEmailsModal';
+import { buildSendScheduleEmailsPayload, filterScheduleEligibleLinks } from '@/lib/scheduleEmails';
 import { campaignsService } from '@/services/campaigns.service';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -2494,8 +2498,18 @@ function DealStage({ leadId }: { leadId: string }) {
 // ─── Content Review Stage ─────────────────────────────────────────────────────
 function ContentReviewStage({ leadId }: { leadId: string }) {
   const { links, isLoading } = useLeadContentLinks(leadId);
+  const { data: clientApproved } = useClientApprovedCreators(leadId);
   const review = useCmReviewContentLink(leadId);
+  const sendEmails = useSendScheduleEmails(leadId);
   const qc = useQueryClient();
+  const [showSendModal, setShowSendModal] = useState(false);
+
+  const eligibleLinks = filterScheduleEligibleLinks(links);
+  const brandName = clientApproved?.brand_name ?? '';
+  const sendPayload =
+    brandName && eligibleLinks.length > 0
+      ? buildSendScheduleEmailsPayload(leadId, brandName, links)
+      : null;
 
   function handleReview(contentId: string, status: 'cm_approved' | 'cm_rejected', note?: string) {
     review.mutate(
@@ -2523,12 +2537,59 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
     }
   }
 
+  function handleSendEmails() {
+    if (!sendPayload) return;
+    sendEmails.mutate(sendPayload, {
+      onSuccess: () => {
+        setShowSendModal(false);
+        const { emails_sent, videos_included } = sendPayload;
+        toast.success(
+          `Schedule finalized and emailed to ${emails_sent} creator${emails_sent !== 1 ? 's' : ''} (${videos_included} video${videos_included !== 1 ? 's' : ''})`
+        );
+      },
+      onError: () => toast.error('Couldn’t send schedule emails. Please try again.'),
+    });
+  }
+
   if (isLoading) return <StageSkeleton />;
+
+  const canSend = Boolean(sendPayload && sendPayload.emails_sent > 0);
+  const sendDisabledReason =
+    eligibleLinks.length === 0
+      ? 'Approve content with the client and schedule a publish date first'
+      : !brandName
+        ? 'Brand name is not available yet'
+        : undefined;
 
   return (
     <>
       <div className={styles.stageHeader}>
         <h2 className={styles.stageTitle}>Content Review</h2>
+        <div className={styles.stageHeaderActions}>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            onClick={() => setShowSendModal(true)}
+            disabled={!canSend}
+            title={sendDisabledReason}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+            </svg>
+            Send Mails
+            {eligibleLinks.length > 0 && (
+              <span className={styles.sendMailsCount}>{eligibleLinks.length}</span>
+            )}
+          </button>
+        </div>
       </div>
       <div className={styles.stageBody}>
         <div className={styles.contentGrid}>
@@ -2561,6 +2622,15 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
           )}
         </div>
       </div>
+
+      {showSendModal && sendPayload && (
+        <SendScheduleEmailsModal
+          payload={sendPayload}
+          isPending={sendEmails.isPending}
+          onConfirm={handleSendEmails}
+          onClose={() => !sendEmails.isPending && setShowSendModal(false)}
+        />
+      )}
     </>
   );
 }

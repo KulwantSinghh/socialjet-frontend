@@ -6,6 +6,9 @@
   background: var(--color-surface-elevated);
   overflow: hidden;
   transition: box-shadow var(--transition-fast);
+  /* Keep natural height inside flex columns (e.g. the content drawer) so the
+     portrait player never gets squished — the container scrolls instead. */
+  flex-shrink: 0;
 }
 
 .card:hover {
@@ -15,12 +18,25 @@
 /* ── Player / play area (portrait reel aspect ratio) ── */
 .player {
   position: relative;
-  width: 100%;
   aspect-ratio: 9 / 16;
-  max-height: 420px;
+  /* Drive size by height so the width follows the 9:16 ratio; keeps the reel
+     compact and centered instead of filling the full card/drawer width. */
+  height: 320px;
+  width: auto;
+  max-width: 100%;
+  margin-inline: auto;
+  flex-shrink: 0;
   background: var(--color-neutral-950);
   color: var(--color-text-inverse);
   overflow: hidden;
+}
+
+.poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .playBtn {
@@ -155,10 +171,6 @@
   margin: 0;
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

@@ -1,11 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import styles from './OutreachInbox.module.css';
 import { useGenerateBulk, useOutreachInbox, useSyncReplies } from '@/hooks/useOutreach';
+import {
+  clientConversationKeys,
+  useClientConversationInbox,
+  useSyncClientReplies,
+} from '@/hooks/useClientConversation';
 import { OutreachThread } from '@/components/campaigns/OutreachThread';
+import { ClientThread } from '@/components/campaigns/ClientThread';
 import { OutreachOverview } from '@/components/campaigns/OutreachOverview';
 import type { OutreachInboxCreator, OutreachInboxLead } from '@/types/outreach.types';
+import type { ClientInboxConversation } from '@/types/clientConversation.types';
 import { formatRelativeTime, getInitials, negotiationStatusMeta } from '@/lib/outreach';
 
 interface OutreachInboxProps {
@@ -17,15 +25,22 @@ type LeadTab = 'influencer' | 'client';
 type LeadView = 'conversations' | 'overview';
 
 export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInboxProps) => {
+  const qc = useQueryClient();
   const { data, isLoading } = useOutreachInbox();
+  const { data: clientInbox } = useClientConversationInbox();
   const leads = useMemo(() => data?.inbox ?? [], [data]);
+
+  const clientConversations = useMemo(() => clientInbox?.conversations ?? [], [clientInbox]);
 
   // Pull fresh inbound replies once when the inbox opens. `mutate` is stable, so
   // this fires a single time on mount and refreshes the inbox on success.
   const { mutate: syncReplies } = useSyncReplies();
+  const { mutate: syncClientReplies } = useSyncClientReplies();
+
   useEffect(() => {
     syncReplies();
-  }, [syncReplies]);
+    syncClientReplies();
+  }, [syncReplies, syncClientReplies]);
 
   const [search, setSearch] = useState('');
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId ?? null);
@@ -50,10 +65,33 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
   const selectedCreator =
     selectedLead?.creators.find((c) => c.creator_id === selectedCreatorId) ?? null;
 
+  const selectedClientConversation = useMemo(
+    () => clientConversations.find((c) => c.lead_id === selectedLeadId) ?? null,
+    [clientConversations, selectedLeadId]
+  );
+
+  // Sync client replies when the Clients tab is opened, then refresh thread data.
+  useEffect(() => {
+    if (tab !== 'client') return;
+    syncClientReplies(undefined, {
+      onSuccess: () => {
+        if (selectedLeadId) {
+          qc.invalidateQueries({ queryKey: clientConversationKeys.thread(selectedLeadId) });
+        }
+      },
+    });
+  }, [tab, selectedLeadId, syncClientReplies, qc]);
+
   function selectLead(lead: OutreachInboxLead) {
     setSelectedLeadId(lead.lead_id);
     setSelectedCreatorId(null);
     setTab('influencer');
+    setView('conversations');
+  }
+
+  function openClientTab() {
+    setTab('client');
+    setSelectedCreatorId(null);
     setView('conversations');
   }
 
@@ -120,7 +158,7 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
               </button>
               <button
                 className={`${styles.tab} ${tab === 'client' ? styles.tabActive : ''}`}
-                onClick={() => setTab('client')}
+                onClick={openClientTab}
               >
                 Clients
               </button>
@@ -148,7 +186,9 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
           </div>
 
           {tab === 'client' ? (
-            <div className={styles.placeholder}>Client conversation — coming soon.</div>
+            <div className={styles.creatorList}>
+              <ClientRow lead={selectedLead} conversation={selectedClientConversation} active />
+            </div>
           ) : (
             <div className={styles.creatorList}>
               {selectedLead.creators.length === 0 ? (
@@ -177,7 +217,13 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
 
       {/* Pane 3 — Thread / Overview. Each branch is keyed for a clean remount. */}
       <section className={styles.threadPane}>
-        {selectedLead && tab === 'influencer' && view === 'overview' ? (
+        {selectedLead && tab === 'client' ? (
+          <ClientThread
+            key={`client:${selectedLead.lead_id}`}
+            leadId={selectedLead.lead_id}
+            preview={selectedClientConversation}
+          />
+        ) : selectedLead && tab === 'influencer' && view === 'overview' ? (
           <OutreachOverview key="overview" leadId={selectedLead.lead_id} />
         ) : selectedLead && selectedCreator && view === 'conversations' ? (
           <OutreachThread
@@ -207,6 +253,50 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
     </div>
   );
 };
+
+function ClientRow({
+  lead,
+  conversation,
+  active,
+}: {
+  lead: OutreachInboxLead;
+  conversation: ClientInboxConversation | null;
+  active: boolean;
+}) {
+  const awaitingUs = conversation?.last_direction === 'inbound';
+  const preview = conversation?.last_message;
+  const previewTime = conversation?.last_at;
+
+  return (
+    <div
+      className={`${styles.creatorItem} ${active ? styles.creatorItemActive : ''} ${
+        awaitingUs ? styles.creatorItemAwaiting : ''
+      }`}
+    >
+      <div className={styles.creatorAvatar}>
+        <span>{getInitials(lead.client_name)}</span>
+      </div>
+      <div className={styles.creatorBody}>
+        <div className={styles.creatorTop}>
+          <span className={styles.creatorName}>{lead.client_name}</span>
+          {previewTime && (
+            <span className={styles.creatorTime}>{formatRelativeTime(previewTime)}</span>
+          )}
+        </div>
+        <div className={styles.creatorHandle}>{lead.company || conversation?.company || '—'}</div>
+        {preview ? (
+          <div className={styles.creatorPreview}>{preview}</div>
+        ) : (
+          <div className={styles.creatorPreview}>No messages yet</div>
+        )}
+        <div className={styles.creatorTags}>
+          {awaitingUs && <span className={styles.newReplyPill}>New Reply</span>}
+          <span className={`${styles.statusPill} ${styles.tone_neutral}`}>Client</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CreatorRow({
   creator,

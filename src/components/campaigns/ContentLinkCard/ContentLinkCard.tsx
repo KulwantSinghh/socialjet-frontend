@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import styles from './ContentLinkCard.module.css';
-import { getDirectVideoUrl, getEmbedUrl, PLATFORM_LABELS } from '@/lib/contentLinks';
+import {
+  getDirectVideoUrl,
+  getEmbedUrl,
+  getThumbnailUrl,
+  PLATFORM_LABELS,
+} from '@/lib/contentLinks';
 import type { ContentItem, ContentStatus } from '@/types/campaign.types';
 
 interface ContentLinkCardProps {
@@ -70,6 +75,7 @@ export const ContentLinkCard = ({
   const embedUrl = getEmbedUrl(item.contentUrl, item.platform);
   const directUrl = embedUrl ? null : getDirectVideoUrl(item.contentUrl, item.platform);
   const canPlayInline = Boolean(embedUrl || directUrl);
+  const posterUrl = item.thumbnail || getThumbnailUrl(item.contentUrl, item.platform);
 
   function confirmReject() {
     onReview?.('cm_rejected', note.trim() || undefined);
@@ -106,6 +112,10 @@ export const ContentLinkCard = ({
             }
             aria-label={canPlayInline ? 'Play video' : 'Open video in new tab'}
           >
+            {posterUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className={styles.poster} src={posterUrl} alt="" loading="lazy" />
+            )}
             <span className={styles.playCircle}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="6 3 21 12 6 21 6 3" />

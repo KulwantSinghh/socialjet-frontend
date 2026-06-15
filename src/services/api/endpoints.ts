@@ -135,6 +135,7 @@ export const ENDPOINTS = {
     LINKS: (leadId: string, creatorId: string) => `/content/${leadId}/${creatorId}/links`,
     CM_REVIEW: (leadId: string, contentId: string) =>
       `/content/${leadId}/links/${contentId}/cm-review`,
+    SEND_SCHEDULE_EMAILS: (leadId: string) => `/content/${leadId}/send-schedule-emails`,
   },
 
   CAMPAIGN_INBOX: {
@@ -293,6 +294,13 @@ export const ENDPOINTS = {
     OPT_IN: (leadId: string, creatorId: string) => `/outreach/opt-in/${leadId}/${creatorId}`,
     NEGOTIATION_STATUS: (leadId: string, creatorId: string) =>
       `/outreach/negotiation/${leadId}/${creatorId}`,
+  },
+
+  CLIENT_CONVERSATION: {
+    INBOX_LIST: '/client-conversation/inbox/list',
+    THREAD: (leadId: string) => `/client-conversation/${leadId}`,
+    SEND: (leadId: string) => `/client-conversation/${leadId}/send`,
+    SYNC_REPLIES: '/client-conversation/sync-replies',
   },
 
   WHATSAPP: {

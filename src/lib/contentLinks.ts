@@ -82,6 +82,29 @@ export function getEmbedUrl(url: string, platform: ContentPlatform): string | nu
 }
 
 /**
+ * Poster image to show before playback. Only YouTube exposes a public,
+ * key-less thumbnail derivable from the video id; other platforms need their
+ * API, so they fall back to the platform-colored placeholder.
+ */
+export function getThumbnailUrl(url: string, platform: ContentPlatform): string | null {
+  if (platform !== 'youtube') return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return null;
+  }
+
+  let id: string | null = null;
+  if (parsed.hostname.includes('youtu.be')) {
+    id = parsed.pathname.split('/').filter(Boolean)[0] ?? null;
+  } else {
+    id = parsed.pathname.match(/\/shorts\/([A-Za-z0-9_-]+)/)?.[1] ?? parsed.searchParams.get('v');
+  }
+  return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+}
+
+/**
  * Resolve a URL the browser can play natively in a <video> element: direct
  * video files and cloud links convertible to one (e.g. Dropbox share links).
  */

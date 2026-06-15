@@ -413,6 +413,28 @@ export interface ContentItem {
   clientNote?: string;
 }
 
+export interface ScheduleEmailVideoPayload {
+  content_id: string;
+  scheduled_at: string;
+}
+
+export interface ScheduleEmailCreatorPayload {
+  creator_id: string;
+  creator_name: string;
+  status: 'finalized';
+  videos: number;
+  items: ScheduleEmailVideoPayload[];
+}
+
+export interface SendScheduleEmailsPayload {
+  lead_id: string;
+  brand_name: string;
+  scheduling_finalized: true;
+  emails_sent: number;
+  videos_included: number;
+  creators: ScheduleEmailCreatorPayload[];
+}
+
 export interface InboxMessage {
   id: string;
   from: string;

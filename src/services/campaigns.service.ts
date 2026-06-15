@@ -11,6 +11,7 @@ import type {
   Influencer,
   ContentItem,
   ContentLinkInput,
+  SendScheduleEmailsPayload,
   ApprovalItem,
   InboxConversation,
   InboxMessage,
@@ -637,6 +638,10 @@ export const campaignsService = {
       status,
       ...(note ? { note } : {}),
     });
+  },
+
+  sendScheduleEmails: async (leadId: string, payload: SendScheduleEmailsPayload): Promise<void> => {
+    await apiClient.post(ENDPOINTS.CAMPAIGN_CONTENT.SEND_SCHEDULE_EMAILS(leadId), payload);
   },
 
   // Inbox
