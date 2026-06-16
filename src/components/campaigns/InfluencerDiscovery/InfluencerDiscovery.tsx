@@ -133,6 +133,10 @@ function CreatorCard({
   const color = avatarColor(entry.creator_name);
   const tierColor = TIER_COLOR[entry.estimated_tier] ?? '#888';
   const scorePercent = Math.round(entry.match_score * 10);
+  const semanticScore =
+    'semantic' in entry.score_breakdown && typeof entry.score_breakdown.semantic === 'number'
+      ? entry.score_breakdown.semantic
+      : entry.score_breakdown.niche_match;
 
   const statusClass =
     entry.status === 'approved'
@@ -253,7 +257,7 @@ function CreatorCard({
           <div className={styles.reasoning}>
             <p className={styles.reasoningText}>{entry.reasoning}</p>
             <div className={styles.scoreBars}>
-              <ScoreBar label="Niche Match" value={entry.score_breakdown.niche_match} />
+              <ScoreBar label="Semantic" value={semanticScore} />
               <ScoreBar label="Budget Fit" value={entry.score_breakdown.budget_fit} />
               <ScoreBar label="Platform" value={entry.score_breakdown.platform_match} />
               <ScoreBar label="Location" value={entry.score_breakdown.location_match} />
@@ -747,9 +751,21 @@ function CreatorDetailModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const scoreEntries = (Object.entries(creator.score_breakdown) as [string, unknown][]).filter(
-    ([, v]) => typeof v === 'number' && (v as number) > 0
-  ) as [string, number][];
+  const semanticScore =
+    typeof creator.score_breakdown.semantic === 'number'
+      ? creator.score_breakdown.semantic
+      : typeof creator.score_breakdown.niche === 'number'
+        ? creator.score_breakdown.niche
+        : 0;
+
+  const normalizedBreakdown = {
+    ...creator.score_breakdown,
+    semantic: semanticScore,
+  };
+
+  const scoreEntries = (Object.entries(normalizedBreakdown) as [string, unknown][])
+    .filter(([key, v]) => key !== 'niche' && typeof v === 'number' && (v as number) > 0)
+    .map(([key, v]) => [key, v as number] as [string, number]);
 
   return (
     <div
@@ -878,11 +894,7 @@ function CreatorDetailModal({
           {/* ── Score rings top-right ── */}
           {scoreEntries.length > 0 && (
             <div className={styles.headerScorePanel}>
-              <ScoreBurst
-                scoreEntries={scoreEntries}
-                totalScore={creator.recommendation_score}
-                selectionReason={creator.selection_reason}
-              />
+              <ScoreBurst scoreEntries={scoreEntries} totalScore={creator.recommendation_score} />
             </div>
           )}
         </div>
@@ -932,6 +944,14 @@ function CreatorDetailModal({
           {creator.gender && <span className={styles.modalChip}>{creator.gender}</span>}
           {creator.is_business && <span className={styles.modalChip}>🏢 Business</span>}
         </div>
+
+        {/* ── Why this creator (AI selection reason) ── */}
+        {creator.selection_reason && (
+          <div className={styles.modalReasonSection}>
+            <p className={styles.modalSectionLabel}>Why this creator</p>
+            <p className={styles.modalSelectionReason}>{creator.selection_reason}</p>
+          </div>
+        )}
 
         {/* ── Contact info ── */}
         {(creator.email || creator.phone || creator.rate) && (
@@ -1154,21 +1174,26 @@ function RecommendationCard({
           <div className={styles.cardScoreRings}>
             {(() => {
               const sb = creator.score_breakdown;
-              const max = Math.max(sb.niche || 0, sb.engagement || 0, sb.completeness || 0, 1);
               return (
                 <>
-                  <ScoreRing label="Niche" value={sb.niche} max={max} size={46} stroke={4} />
+                  <ScoreRing
+                    label="Semantic"
+                    value={sb.semantic ?? 0}
+                    max={80}
+                    size={46}
+                    stroke={4}
+                  />
                   <ScoreRing
                     label="Engagement"
                     value={sb.engagement}
-                    max={max}
+                    max={15}
                     size={46}
                     stroke={4}
                   />
                   <ScoreRing
                     label="Completeness"
                     value={sb.completeness}
-                    max={max}
+                    max={5}
                     size={46}
                     stroke={4}
                   />
@@ -1496,7 +1521,7 @@ function clientApprovedToCreator(c: ClientApprovedCreator): RecommendationCreato
     instagram_handle: p.instagram_handle ?? null,
     tiktok_handle: p.tiktok_handle ?? null,
     recommendation_score: 0,
-    score_breakdown: { niche: 0, engagement: 0, completeness: 0 },
+    score_breakdown: { niche: 0, engagement: 0, completeness: 0, semantic: 0 },
     selection_reason: '',
     status: null,
     profile_picture: p.profile_image ?? null,
