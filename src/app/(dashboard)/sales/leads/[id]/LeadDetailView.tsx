@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './LeadDetailView.module.css';
@@ -474,6 +475,45 @@ const RefreshIcon = () => (
   </svg>
 );
 
+interface ProposalByMeetingResponse {
+  proposal: SalesAnalysis;
+  call_summary?: string;
+  call_outcome?: string;
+  call_id?: string;
+  review_status?: string;
+  rejection_reason?: string | null;
+  email_sent?: boolean;
+}
+
+// Document-shaped skeleton shown while the proposal re-syncs with the server,
+// so the layout never collapses to a spinner during a save refresh.
+function ProposalDocSkeleton() {
+  return (
+    <div className={styles.docSkeleton} aria-hidden="true">
+      <div className={styles.docSkeletonHeader}>
+        <div className={styles.docSkeletonLogo} />
+        <div className={styles.docSkeletonTitleGroup}>
+          <div className={cn(styles.docSkelBar, styles.docSkelBarTitle)} />
+          <div className={cn(styles.docSkelBar, styles.docSkelBarSub)} />
+        </div>
+      </div>
+      <div className={styles.docSkeletonKpis}>
+        <div className={styles.docSkeletonKpi} />
+        <div className={styles.docSkeletonKpi} />
+        <div className={styles.docSkeletonKpi} />
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className={styles.docSkeletonSection}>
+          <div className={cn(styles.docSkelBar, styles.docSkelBarHeading)} />
+          <div className={styles.docSkelBar} />
+          <div className={styles.docSkelBar} />
+          <div className={cn(styles.docSkelBar, styles.docSkelBarShort)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
   const meetingNum = meeting.meeting_number ?? 1;
   const numLabel = MEETING_NUMBER_LABELS[meetingNum] ?? `${meetingNum}th`;
@@ -483,33 +523,44 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
   const [callId, setCallId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState<string>('');
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState<Partial<SalesAnalysis>>({});
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+
+  // Fetch the canonical proposal for this meeting and sync local state.
+  // Shared by the initial mount load and the post-save refresh so the
+  // server stays the single source of truth. Returns true if a proposal exists.
+  const loadProposal = useCallback(async (): Promise<boolean> => {
+    const { data } = await apiClient.get<ProposalByMeetingResponse>(
+      ENDPOINTS.INTELLIGENCE.PROPOSAL_BY_MEETING(meeting.meeting_id)
+    );
+    if (!data?.proposal) return false;
+    setAnalysis({
+      ...data.proposal,
+      call_summary: data.call_summary ?? data.proposal.call_summary ?? '',
+      call_outcome: data.call_outcome ?? data.proposal.call_outcome ?? '',
+    });
+    setCallId(data.call_id ?? null);
+    setReviewStatus(data.review_status ?? '');
+    setRejectionReason(data.rejection_reason ?? null);
+    setEmailSent(data.email_sent === true);
+    return true;
+  }, [meeting.meeting_id]);
 
   // On mount: try to load existing proposal first
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const { data } = await apiClient.get(
-          ENDPOINTS.INTELLIGENCE.PROPOSAL_BY_MEETING(meeting.meeting_id)
-        );
-        if (!cancelled && data?.proposal) {
-          setAnalysis({
-            ...data.proposal,
-            call_summary: data.call_summary,
-            call_outcome: data.call_outcome,
-          });
-          setCallId(data.call_id);
-          setReviewStatus(data.review_status ?? '');
-          setRejectionReason(data.rejection_reason ?? null);
-        }
+        if (!cancelled) await loadProposal();
       } catch {
         // No proposal yet — show Generate button
       } finally {
@@ -520,7 +571,7 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
     return () => {
       cancelled = true;
     };
-  }, [meeting.meeting_id]);
+  }, [loadProposal]);
 
   const generate = async () => {
     setLoading(true);
@@ -540,6 +591,13 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
     }
   };
 
+  // Re-generating discards the current proposal (and any edits) — confirm first
+  // via a centered modal (see render).
+  const confirmRegenerate = () => {
+    setShowRegenConfirm(false);
+    void generate();
+  };
+
   const saveEdits = async () => {
     if (!callId || !analysis) return;
     setSaving(true);
@@ -556,9 +614,20 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
       await apiClient.patch(ENDPOINTS.INTELLIGENCE.UPDATE_PROPOSAL(callId), body, {
         headers: { 'Content-Type': 'application/json' },
       });
+      // Optimistically reflect the edit for instant feedback, then re-sync
+      // with the server (PATCH 200 → GET by-meeting) so derived/normalized
+      // fields stay authoritative.
       setAnalysis(merged);
       setEditDraft({});
       setIsEditing(false);
+      setRefreshing(true);
+      try {
+        await loadProposal();
+      } catch {
+        // Refresh failed — keep the optimistic merged value on screen.
+      } finally {
+        setRefreshing(false);
+      }
     } catch {
       setError('Failed to save changes. Please try again.');
     } finally {
@@ -604,15 +673,7 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
   };
 
   if (loading) {
-    return (
-      <div className={styles.analysisLoading}>
-        <div className={styles.analysisLoadingSpinner} />
-        <div className={styles.analysisLoadingText}>
-          <p className={styles.analysisLoadingTitle}>Loading proposal…</p>
-          <p className={styles.analysisLoadingSubtitle}>Checking for existing proposal</p>
-        </div>
-      </div>
-    );
+    return <ProposalDocSkeleton />;
   }
 
   if (!analysis) {
@@ -646,11 +707,21 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
     );
   }
 
+  // Derive a single, authoritative proposal status for the header chip.
+  const proposalStatus = rejectionReason
+    ? { label: 'Rejected', cls: styles.statusChipRejected }
+    : reviewStatus === 'pending_approval' || submitSuccess
+      ? { label: 'Pending Approval', cls: styles.statusChipPending }
+      : emailSent
+        ? { label: 'Sent', cls: styles.statusChipSent }
+        : { label: 'Draft', cls: styles.statusChipDraft };
+
   return (
     <div className={styles.analysisWrap}>
       {/* Action bar */}
       <div className={styles.analysisActionBar}>
         <div className={styles.analysisActionLeft}>
+          <span className={cn(styles.statusChip, proposalStatus.cls)}>{proposalStatus.label}</span>
           <span className={styles.meetingTypeBadge}>{numLabel} Meeting</span>
           {typeLabel && <span className={styles.meetingTypeBadge}>{typeLabel}</span>}
           <span className={styles.proposalMetaItem}>
@@ -681,7 +752,7 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
           ) : (
             <>
               <button
-                className={cn(styles.analysisBarBtn, styles.analysisBarBtnActive)}
+                className={styles.analysisBarBtn}
                 onClick={() => {
                   setEditDraft({});
                   setIsEditing(true);
@@ -695,18 +766,20 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
 
               <button
                 className={styles.analysisBarBtnGhost}
-                onClick={generate}
-                title="Re-generate from transcript"
+                onClick={() => setShowRegenConfirm(true)}
+                title="Re-generate from transcript (replaces the current proposal)"
               >
                 <RefreshIcon /> Re-generate
               </button>
+              <span className={styles.barDivider} aria-hidden="true" />
               {reviewStatus === 'pending_approval' || submitSuccess ? (
                 <span className={styles.approvalSentBadge}>✓ Sent for Approval</span>
               ) : (
                 <button
                   className={styles.sendApprovalBtn}
                   onClick={sendForApproval}
-                  disabled={submitting}
+                  disabled={submitting || emailSent}
+                  title={emailSent ? 'Proposal Already Sent' : undefined}
                 >
                   {submitting ? 'Submitting…' : 'Send for Approval'}
                 </button>
@@ -773,13 +846,59 @@ function MeetingAnalysisCard({ meeting }: { meeting: Meeting }) {
               </p>
             </div>
           )}
-          <div
-            ref={docRef}
-            className={styles.pdoc}
-            dangerouslySetInnerHTML={{ __html: generateProposalPageHTML(analysis!) }}
-          />
+          {refreshing ? (
+            <ProposalDocSkeleton />
+          ) : (
+            <div
+              ref={docRef}
+              className={styles.pdoc}
+              dangerouslySetInnerHTML={{ __html: generateProposalPageHTML(analysis!) }}
+            />
+          )}
         </>
       )}
+
+      {showRegenConfirm &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className={styles.modalOverlay} onClick={() => setShowRegenConfirm(false)}>
+            <div
+              className={styles.modal}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="regen-confirm-title"
+            >
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle} id="regen-confirm-title">
+                  Re-generate proposal?
+                </h3>
+              </div>
+              <p className={styles.confirmModalText}>
+                This rebuilds the proposal from the meeting transcript.{' '}
+                <strong>The current proposal and any unsaved edits will be lost</strong> and cannot
+                be recovered.
+              </p>
+              <div className={styles.confirmModalActions}>
+                <button
+                  type="button"
+                  className={styles.confirmCancelBtn}
+                  onClick={() => setShowRegenConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.confirmRegenBtn}
+                  onClick={confirmRegenerate}
+                >
+                  <RefreshIcon /> Re-generate
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -1238,9 +1357,9 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
     <div className={styles.root}>
       {/* Breadcrumb */}
       <div className={styles.breadcrumb}>
-        <button className={styles.backBtn} onClick={() => router.back()}>
+        <Link href="/sales/leads" className={styles.backBtn}>
           <BackIcon /> Back to Leads
-        </button>
+        </Link>
       </div>
 
       <div className={styles.pageLayout}>
@@ -1268,6 +1387,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
 
           <div className={styles.sidebarBody}>
             {/* Contact info */}
+            <p className={styles.sidebarSectionLabel}>Contact</p>
             <div className={styles.sidebarContacts}>
               {lead.email && (
                 <div className={styles.contactItem}>
@@ -1333,6 +1453,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
             <div className={styles.sidebarDivider} />
 
             {/* Stats */}
+            <p className={styles.sidebarSectionLabel}>Activity</p>
             <div className={styles.sidebarStats}>
               <div className={styles.statCard}>
                 <span className={styles.statValue}>{meetingsData?.meetings?.length ?? '—'}</span>
@@ -1340,21 +1461,22 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
               </div>
               <div className={styles.statCard}>
                 <span className={styles.statValue}>{meetingsWithTranscript.length}</span>
-                <span className={styles.statLabel}>Analysable</span>
+                <span className={styles.statLabel}>Transcripts</span>
               </div>
               <div className={styles.statCard}>
                 <span className={styles.statValue}>{daysSince(lead.created_at)}</span>
-                <span className={styles.statLabel}>Days Active</span>
+                <span className={styles.statLabel}>Days in Pipeline</span>
               </div>
               <div className={styles.statCard}>
                 <span
-                  className={styles.statValue}
-                  style={{
-                    fontSize: 'var(--text-sm)',
-                    color: meetingsWithTranscript.length > 0 ? '#22c55e' : 'inherit',
-                  }}
+                  className={cn(
+                    styles.statusChip,
+                    meetingsWithTranscript.length > 0
+                      ? styles.statusChipSent
+                      : styles.statusChipDraft
+                  )}
                 >
-                  {meetingsWithTranscript.length > 0 ? 'Ready' : 'No transcript'}
+                  {meetingsWithTranscript.length > 0 ? 'Ready' : 'Awaiting'}
                 </span>
                 <span className={styles.statLabel}>Analysis</span>
               </div>
@@ -1365,10 +1487,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
             {/* Deal details */}
             <button
               type="button"
-              className={cn(
-                styles.dealDetailsBtn,
-                dealDetailsMissing && styles.dealDetailsBtnMissing
-              )}
+              className={styles.dealDetailsBtn}
               onClick={() => setShowDealDetailsModal(true)}
             >
               <svg
@@ -1556,16 +1675,6 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
           {/* ── Proposals / Intelligence Analysis ── */}
           {activeTab === 'proposals' && (
             <div className={styles.panel}>
-              <div className={styles.panelHeader}>
-                <h3 className={styles.panelTitle}>Proposals</h3>
-                {meetingsWithTranscript.length > 0 && (
-                  <span style={{ fontSize: 'var(--text-xs)', color: '#16a34a', fontWeight: 600 }}>
-                    ✓ {meetingsWithTranscript.length} meeting
-                    {meetingsWithTranscript.length > 1 ? 's' : ''} ready for analysis
-                  </span>
-                )}
-              </div>
-
               {lead.flagged && lead.flag_reason && (
                 <div className={styles.flagAlert}>
                   <div className={styles.flagAlertHeader}>

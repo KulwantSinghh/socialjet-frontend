@@ -8,6 +8,8 @@ import type {
   CampaignDocument,
   KolBrief,
   CampaignInfluencer,
+  CreateCreatorRequest,
+  CreateCreatorResponse,
   Influencer,
   ContentItem,
   ContentLinkInput,
@@ -553,6 +555,11 @@ export const campaignsService = {
       ? data
       : (data.creators ?? data.influencers ?? []);
     return list.map(mapInfluencer);
+  },
+
+  createInfluencer: async (payload: CreateCreatorRequest): Promise<CreateCreatorResponse> => {
+    const { data } = await apiClient.post(ENDPOINTS.CAMPAIGN_INFLUENCERS.CREATE, payload);
+    return data as CreateCreatorResponse;
   },
 
   // Lead influencers

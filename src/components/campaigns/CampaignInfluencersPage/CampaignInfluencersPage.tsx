@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import styles from './CampaignInfluencersPage.module.css';
 import { useAllInfluencers } from '@/hooks/useCampaignLeads';
 import { CreatorProfileModal } from '@/components/creators/CreatorProfileModal';
+import { AddInfluencerModal } from '@/components/campaigns/AddInfluencerModal';
 import type { Influencer } from '@/types/campaign.types';
 
 const AVATAR_COLORS = [
@@ -306,6 +307,7 @@ export function CampaignInfluencersPage() {
   const [search, setSearch] = useState('');
   const [platform, setPlatform] = useState('');
   const [activeCreatorId, setActiveCreatorId] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const { data: influencers, isLoading } = useAllInfluencers({
     search: search || undefined,
@@ -351,6 +353,19 @@ export function CampaignInfluencersPage() {
             <option value="tiktok">TikTok</option>
             <option value="youtube">YouTube</option>
           </select>
+          <button className={styles.addBtn} onClick={() => setShowAddModal(true)}>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add Influencer
+          </button>
         </div>
       </div>
 
@@ -382,6 +397,8 @@ export function CampaignInfluencersPage() {
       {activeCreatorId && (
         <CreatorProfileModal creatorId={activeCreatorId} onClose={() => setActiveCreatorId(null)} />
       )}
+
+      {showAddModal && <AddInfluencerModal onClose={() => setShowAddModal(false)} />}
     </div>
   );
 }

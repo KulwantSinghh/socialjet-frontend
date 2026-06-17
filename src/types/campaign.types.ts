@@ -238,6 +238,34 @@ export interface Influencer {
   creatorStatus?: string;
 }
 
+export interface CreateCreatorRequest {
+  name: string;
+  email: string;
+  platforms: string[];
+  usernames: Record<string, string>;
+  pricing: string;
+  whatsapp_number: string;
+  age?: number;
+  location: string;
+  niches: string[];
+}
+
+export interface CreateCreatorResponse {
+  creator_id: string;
+  message: string;
+  creator: {
+    name: string;
+    email: string;
+    instagram_handle?: string;
+    rate?: string;
+    whatsapp?: string;
+    platforms: string[];
+    niches: string[];
+    location?: string;
+    age?: number;
+  };
+}
+
 export interface CampaignInfluencer extends Influencer {
   status: InfluencerStatus;
   dealStatus?: DealStatus;

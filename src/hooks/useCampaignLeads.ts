@@ -233,6 +233,17 @@ export function useAllInfluencers(params?: { search?: string; platform?: string;
   });
 }
 
+export function useCreateInfluencer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: import('@/types/campaign.types').CreateCreatorRequest) =>
+      campaignsService.createInfluencer(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['influencers'] });
+    },
+  });
+}
+
 export function useCampaignApprovals() {
   return useQuery({
     queryKey: ['campaign-approvals'],

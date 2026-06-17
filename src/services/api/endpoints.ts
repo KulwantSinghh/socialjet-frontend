@@ -114,6 +114,7 @@ export const ENDPOINTS = {
 
   CAMPAIGN_INFLUENCERS: {
     LIST: '/creators/',
+    CREATE: '/creators/',
     DETAIL: (id: string) => `/creators/${id}`,
     LEAD_LIST: (leadId: string) => `/campaign-creators/${leadId}`,
     ADD_TO_LEAD: (leadId: string) => `/campaign-creators/${leadId}`,

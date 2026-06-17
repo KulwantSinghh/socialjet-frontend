@@ -40,12 +40,12 @@ function proposalMeta(data: SalesAnalysis, date: string): string {
     { label: 'Date', value: date },
   ].filter(Boolean) as { label: string; value: string }[];
 
-  return `<div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.15);margin-top:40px;padding-top:24px;">
+  return `<div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.22);margin-top:22px;padding-top:18px;">
     ${items
       .map(
         (item, i) => `
-      <div style="flex:1;${i < items.length - 1 ? `border-right:1px solid rgba(255,255,255,0.15);` : ''}padding:0 ${i === 0 ? '24px 0 0' : '24px'};">
-        <div style="font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:6px;">${item.label}</div>
+      <div style="flex:1;${i < items.length - 1 ? `border-right:1px solid rgba(255,255,255,0.22);` : ''}padding:0 ${i === 0 ? '24px 0 0' : '24px'};">
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.78);margin-bottom:6px;">${item.label}</div>
         <div style="font-size:13px;font-weight:600;color:#fff;line-height:1.4;">${item.value}</div>
       </div>`
       )
@@ -384,24 +384,24 @@ export function generateProposalPageHTML(data: SalesAnalysis): string {
   }
 
   return `
-    <!-- Cover -->
-    <div style="background:linear-gradient(160deg,#1a1040 0%,${PURPLE} 60%,${PURPLE_MID} 100%);padding:56px 56px 48px;width:100%;margin:0;">
+    <!-- Cover (condensed for the in-app working view; full-size hero lives in the PDF export) -->
+    <div style="background:linear-gradient(160deg,#1a1040 0%,${PURPLE} 60%,${PURPLE_MID} 100%);padding:28px 36px 26px;width:100%;margin:0;">
 
       <!-- Agency label -->
-      <div style="font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:48px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.62);margin-bottom:22px;">
         SocialJet &nbsp;·&nbsp; Influencer Marketing Agency
       </div>
 
       <!-- Main heading: SocialJet × Brand -->
-      <div style="margin-bottom:28px;">
-        <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px;">Prepared for</div>
-        <h1 style="font-size:42px;font-weight:800;color:#ffffff;line-height:1.1;margin:0;letter-spacing:-0.5px;">
-          SocialJet <span style="color:rgba(255,255,255,0.35);font-weight:300;margin:0 6px;">×</span> ${data.brand_name || 'Client'}
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.72);margin-bottom:8px;">Prepared for</div>
+        <h1 style="font-size:28px;font-weight:800;color:#ffffff;line-height:1.15;margin:0;letter-spacing:-0.5px;">
+          SocialJet <span style="color:rgba(255,255,255,0.45);font-weight:300;margin:0 6px;">×</span> ${data.brand_name || 'Client'}
         </h1>
       </div>
 
       <!-- Proposal type tag -->
-      <div style="display:inline-block;border:1px solid rgba(255,255,255,0.25);border-radius:4px;padding:5px 14px;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.65);margin-bottom:32px;">
+      <div style="display:inline-block;border:1px solid rgba(255,255,255,0.3);border-radius:4px;padding:5px 14px;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.78);margin-bottom:18px;">
         Influencer Marketing Proposal
       </div>
 
@@ -409,8 +409,8 @@ export function generateProposalPageHTML(data: SalesAnalysis): string {
       ${
         data.campaign_objective
           ? `
-      <div style="border-left:3px solid rgba(255,255,255,0.3);padding-left:20px;margin-bottom:0;max-width:580px;">
-        <p style="font-size:15px;font-weight:400;color:rgba(255,255,255,0.85);line-height:1.65;margin:0;font-family:'Inter',sans-serif;">${data.campaign_objective}</p>
+      <div style="border-left:3px solid rgba(255,255,255,0.4);padding-left:18px;margin-bottom:0;max-width:640px;">
+        <p style="font-size:14px;font-weight:400;color:rgba(255,255,255,0.92);line-height:1.6;margin:0;font-family:'Inter',sans-serif;">${data.campaign_objective}</p>
       </div>`
           : ''
       }
