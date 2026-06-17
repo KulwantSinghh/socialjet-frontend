@@ -19,6 +19,7 @@ import { TIMELINE_EVENT_LABELS } from '@/types/timeline.types';
 import { generateProposalHTML, generateProposalPageHTML } from '@/lib/generateProposalHTML';
 import { DealDetailsModal } from '@/components/shared/DealDetailsModal';
 import { useDealDetails } from '@/hooks/useDealDetails';
+import { parseLeadMessage } from '@/lib/leadMessage';
 
 // ─── Journey stages ───────────────────────────────────────────────────────────
 const JOURNEY_STAGES = [
@@ -1206,6 +1207,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
 
   const statusColor = STATUS_COLORS[lead?.status ?? ''] ?? '#6b7280';
   const sourceLabel = SOURCE_LABELS[lead?.source ?? ''] ?? lead?.source ?? 'Unknown';
+  const leadMessage = lead ? parseLeadMessage(lead) : null;
 
   const meetingsWithTranscript = meetingsData?.meetings?.filter((m) => m.has_transcript) ?? [];
   const pendingMeetings =
@@ -1253,9 +1255,9 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
               <span
                 className={styles.statusBadge}
                 style={{
-                  background: `${statusColor}25`,
-                  color: '#fff',
-                  border: `1px solid rgba(255,255,255,0.3)`,
+                  background: `${statusColor}1a`,
+                  color: statusColor,
+                  border: `1px solid ${statusColor}33`,
                 }}
               >
                 {lead.status?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
@@ -1296,6 +1298,37 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
                 <span className={styles.contactText}>{daysSince(lead.created_at)}d in system</span>
               </div>
             </div>
+
+            {/* What the lead is looking for */}
+            {leadMessage?.message && (
+              <>
+                <div className={styles.sidebarDivider} />
+                <div className={styles.leadMessage}>
+                  <div className={styles.leadMessageHeader}>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span>What they&apos;re looking for</span>
+                  </div>
+                  {leadMessage.bookingTitle && (
+                    <p className={styles.leadMessageMeta}>{leadMessage.bookingTitle}</p>
+                  )}
+                  <p className={styles.leadMessageBody}>{leadMessage.message}</p>
+                  {leadMessage.canceled && (
+                    <span className={styles.leadMessageCanceled}>Meeting canceled</span>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className={styles.sidebarDivider} />
 

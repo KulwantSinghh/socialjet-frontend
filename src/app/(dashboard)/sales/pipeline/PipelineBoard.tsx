@@ -8,6 +8,7 @@ import { useDealDetailsStatuses } from '@/hooks/useDealDetails';
 import { dealDetailsService } from '@/services/dealDetails.service';
 import { DealDetailsModal } from '@/components/shared/DealDetailsModal';
 import type { Lead } from '@/types/leads.types';
+import { leadMessagePreview } from '@/lib/leadMessage';
 import styles from './PipelineBoard.module.css';
 import { cn } from '@/lib/utils';
 
@@ -79,6 +80,13 @@ const SOURCE_LABELS: Record<string, string> = {
   manual: 'Manual',
 };
 
+const SOURCE_FULL_LABELS: Record<string, string> = {
+  whatsapp: 'WhatsApp',
+  contact_form: 'Web form',
+  calendly: 'Calendly',
+  manual: 'Manual',
+};
+
 const SOURCE_COLORS: Record<string, string> = {
   whatsapp: '#25d366',
   contact_form: '#3b82f6',
@@ -112,6 +120,7 @@ function getColKey(lead: { status: string; pipeline_status?: string }): ColKey {
 // ─── Lead Card ────────────────────────────────────────────────────────────────
 function LeadCard({
   lead,
+  accent,
   editMode,
   isDragging,
   dealStatus,
@@ -121,6 +130,7 @@ function LeadCard({
   onOpenDealDetails,
 }: {
   lead: Lead;
+  accent: string;
   editMode: boolean;
   isDragging: boolean;
   dealStatus?: 'missing' | 'filled';
@@ -130,8 +140,9 @@ function LeadCard({
   onOpenDealDetails: () => void;
 }) {
   const days = daysSince(lead.updated_at);
-  const srcLabel = SOURCE_LABELS[lead.source] ?? lead.source;
+  const srcLabel = SOURCE_FULL_LABELS[lead.source] ?? SOURCE_LABELS[lead.source] ?? lead.source;
   const srcColor = SOURCE_COLORS[lead.source] ?? '#6b7280';
+  const messagePreview = leadMessagePreview(lead);
 
   return (
     <div
@@ -141,6 +152,7 @@ function LeadCard({
         isDragging && styles.cardDragging,
         dealStatus === 'missing' && styles.cardNeedsDetails
       )}
+      style={{ '--card-accent': accent } as React.CSSProperties}
       draggable={editMode}
       onDragStart={editMode ? onDragStart : undefined}
       onDragEnd={editMode ? onDragEnd : undefined}
@@ -163,52 +175,53 @@ function LeadCard({
       )}
 
       <div className={styles.cardHeader}>
-        <div className={styles.cardAvatar}>{lead.name?.charAt(0).toUpperCase() ?? '?'}</div>
+        <div className={styles.cardAvatar} style={{ background: accent }}>
+          {lead.name?.charAt(0).toUpperCase() ?? '?'}
+        </div>
         <div className={styles.cardInfo}>
           <span className={styles.cardName}>{lead.name}</span>
           {lead.company && <span className={styles.cardCompany}>{lead.company}</span>}
         </div>
-      </div>
-
-      <div className={styles.cardMeta}>
-        <span
-          className={styles.sourceTag}
-          style={{
-            background: `${srcColor}15`,
-            color: srcColor,
-            border: `1px solid ${srcColor}30`,
-          }}
-        >
-          {srcLabel}
-        </span>
-        {lead.status === 'proposal_ready' && (
-          <span className={cn(styles.proposalFlag, styles.proposalFlagReady)}>Ready</span>
-        )}
-        {lead.status === 'proposal_sent' && (
-          <span className={cn(styles.proposalFlag, styles.proposalFlagSent)}>Sent</span>
-        )}
         <span
           className={cn(
             styles.daysTag,
             days > 14 && styles.daysTagWarning,
             days > 30 && styles.daysTagDanger
           )}
+          title={`Last updated ${formatDate(lead.updated_at)}`}
         >
           {days}d
         </span>
       </div>
 
-      <div className={styles.cardFooter}>
-        <span className={styles.cardDate}>{formatDate(lead.updated_at)}</span>
-        {lead.deal_value && (
-          <span className={styles.dealValue}>${Number(lead.deal_value).toLocaleString()}</span>
-        )}
+      {messagePreview && (
+        <p className={styles.cardMessage} title={messagePreview}>
+          {messagePreview}
+        </p>
+      )}
+
+      <div className={styles.cardMeta}>
+        <span className={styles.sourceTag} style={{ color: srcColor }}>
+          <span className={styles.sourceDot} style={{ background: srcColor }} aria-hidden />
+          {srcLabel}
+        </span>
+        <div className={styles.cardMetaRight}>
+          {lead.status === 'proposal_ready' && (
+            <span className={cn(styles.proposalFlag, styles.proposalFlagReady)}>Ready</span>
+          )}
+          {lead.status === 'proposal_sent' && (
+            <span className={cn(styles.proposalFlag, styles.proposalFlagSent)}>Sent</span>
+          )}
+          {lead.deal_value && (
+            <span className={styles.dealValue}>${Number(lead.deal_value).toLocaleString()}</span>
+          )}
+        </div>
       </div>
 
       {dealStatus === 'missing' && (
         <button
           type="button"
-          className={styles.dealMissingBadge}
+          className={cn(styles.dealChip, styles.dealChipMissing)}
           onClick={(e) => {
             e.stopPropagation();
             onOpenDealDetails();
@@ -229,13 +242,13 @@ function LeadCard({
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
-          Deal details missing — fill now
+          Add deal details
         </button>
       )}
       {dealStatus === 'filled' && (
         <button
           type="button"
-          className={styles.dealFilledBadge}
+          className={cn(styles.dealChip, styles.dealChipFilled)}
           onClick={(e) => {
             e.stopPropagation();
             onOpenDealDetails();
@@ -255,7 +268,7 @@ function LeadCard({
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
-          Deal details — view
+          Deal details
         </button>
       )}
     </div>
@@ -314,7 +327,7 @@ function Column({
           : undefined
       }
     >
-      <div className={styles.columnHeader} style={{ borderTopColor: col.color }}>
+      <div className={styles.columnHeader} style={{ borderBottomColor: col.color }}>
         <div className={styles.columnTitleRow}>
           <span className={styles.columnLabel} style={{ color: col.color }}>
             {col.label}
@@ -335,6 +348,7 @@ function Column({
             <LeadCard
               key={lead.lead_id}
               lead={lead}
+              accent={col.color}
               editMode={editMode}
               isDragging={draggingId === lead.lead_id}
               dealStatus={
