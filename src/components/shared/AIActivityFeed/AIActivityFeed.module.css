@@ -26,6 +26,15 @@
   margin: 0;
 }
 
+.empty {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  margin: 0;
+  padding: var(--space-6) 0;
+  text-align: center;
+}
+
 .list {
   display: flex;
   flex-direction: column;

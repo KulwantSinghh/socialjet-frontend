@@ -2,15 +2,20 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import styles from './CampaignHealthChart.module.css';
+import type { CampaignHealthSegment } from '@/types/dashboard.types';
 
-const data = [
-  { name: 'Delayed', value: 4, color: '#6c63ff' },
-  { name: 'On Track', value: 2, color: '#ef4444' },
-  { name: 'At Risk', value: 6, color: '#22c55e' },
-  { name: 'Pending', value: 12, color: '#f59e0b' },
-];
+interface CampaignHealthChartProps {
+  segments: CampaignHealthSegment[];
+  onTrackPct: number;
+  total: number;
+}
 
-export const CampaignHealthChart = () => {
+const EMPTY_RING = [{ name: 'No campaigns', value: 1, color: 'var(--color-neutral-200)' }];
+
+export const CampaignHealthChart = ({ segments, onTrackPct, total }: CampaignHealthChartProps) => {
+  const hasData = total > 0 && segments.some((s) => s.value > 0);
+  const ringData = hasData ? segments : EMPTY_RING;
+
   return (
     <div className={styles.root}>
       <h3 className={styles.title}>Campaign Health</h3>
@@ -18,36 +23,39 @@ export const CampaignHealthChart = () => {
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
             <Pie
-              data={data}
+              data={ringData}
               cx="50%"
               cy="50%"
               innerRadius={60}
               outerRadius={90}
-              paddingAngle={2}
+              paddingAngle={hasData ? 2 : 0}
               dataKey="value"
               startAngle={90}
               endAngle={-270}
             >
-              {data.map((entry, index) => (
+              {ringData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
               ))}
             </Pie>
-            <Tooltip
-              formatter={(value: unknown) => [value as number, 'Campaign']}
-              contentStyle={{
-                borderRadius: '8px',
-                border: '1px solid #e5e7eb',
-                fontSize: '12px',
-              }}
-            />
+            {hasData && (
+              <Tooltip
+                formatter={(value: unknown, name: unknown) => [value as number, name as string]}
+                contentStyle={{
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  fontSize: '12px',
+                }}
+              />
+            )}
           </PieChart>
         </ResponsiveContainer>
         <div className={styles.centerLabel}>
-          <span className={styles.centerValue}>16%</span>
+          <span className={styles.centerValue}>{onTrackPct}%</span>
+          <span className={styles.centerCaption}>on track</span>
         </div>
       </div>
       <div className={styles.legend}>
-        {data.map((item) => (
+        {segments.map((item) => (
           <div key={item.name} className={styles.legendItem}>
             <span className={styles.legendDot} style={{ background: item.color }} />
             <span className={styles.legendName}>{item.name}</span>

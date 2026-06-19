@@ -10,28 +10,18 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import styles from './RevenueROIChart.module.css';
+import type { RevenueTrendPoint } from '@/types/dashboard.types';
 
-const data = [
-  { month: 'Jan', revenue: 5000 },
-  { month: 'Feb', revenue: 8000 },
-  { month: 'Mar', revenue: 12000 },
-  { month: 'Apr', revenue: 10000 },
-  { month: 'May', revenue: 22000 },
-  { month: 'Jun', revenue: 30000 },
-  { month: 'Jul', revenue: 28000 },
-  { month: 'Aug', revenue: 40000 },
-  { month: 'Sep', revenue: 52000 },
-  { month: 'Oct', revenue: 60000 },
-  { month: 'Nov', revenue: 68000 },
-  { month: 'Dec', revenue: 75000 },
-];
+interface RevenueROIChartProps {
+  data: RevenueTrendPoint[];
+}
 
 const formatYAxis = (value: number) => {
   if (value >= 1000) return `$${value / 1000}k`;
   return `$${value}`;
 };
 
-export const RevenueROIChart = () => {
+export const RevenueROIChart = ({ data }: RevenueROIChartProps) => {
   return (
     <div className={styles.root}>
       <h3 className={styles.title}>Revenue &amp; ROI Trend</h3>

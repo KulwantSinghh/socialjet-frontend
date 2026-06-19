@@ -1,20 +1,13 @@
 import styles from './CampaignPipeline.module.css';
+import { cn } from '@/lib/utils';
+import type { CampaignPipelinePhase } from '@/types/dashboard.types';
 
-interface PipelineStage {
-  label: string;
-  count: number;
+interface CampaignPipelineProps {
+  phases: CampaignPipelinePhase[];
+  lastUpdatedLabel?: string;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
-
-const STAGES: PipelineStage[] = [
-  { label: 'Leads', count: 42 },
-  { label: 'Setup', count: 9 },
-  { label: 'Proposal', count: 9 },
-  { label: 'Discovery', count: 9 },
-  { label: 'Outreach', count: 9 },
-  { label: 'Review', count: 9 },
-  { label: 'Live', count: 9 },
-  { label: 'Analytics', count: 9 },
-];
 
 const ArrowIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -47,21 +40,35 @@ const RefreshIcon = () => (
   </svg>
 );
 
-export const CampaignPipeline = () => {
+export const CampaignPipeline = ({
+  phases,
+  lastUpdatedLabel,
+  onRefresh,
+  isRefreshing,
+}: CampaignPipelineProps) => {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
         <h3 className={styles.title}>Campaign Pipeline</h3>
         <div className={styles.meta}>
-          <span className={styles.lastUpdated}>Last updated 4m ago</span>
-          <RefreshIcon />
+          {lastUpdatedLabel && <span className={styles.lastUpdated}>{lastUpdatedLabel}</span>}
+          {onRefresh && (
+            <button
+              type="button"
+              className={cn(styles.refreshBtn, isRefreshing && styles.refreshing)}
+              onClick={onRefresh}
+              aria-label="Refresh pipeline"
+            >
+              <RefreshIcon />
+            </button>
+          )}
         </div>
       </div>
 
       <div className={styles.pipeline}>
-        {STAGES.map((stage, index) => (
-          <div key={stage.label} className={styles.stageGroup}>
-            <div className={styles.stage}>
+        {phases.map((stage, index) => (
+          <div key={stage.phase} className={styles.stageGroup}>
+            <div className={cn(styles.stage, stage.count === 0 && styles.stageEmpty)}>
               <span className={styles.stageLabel}>{stage.label}</span>
               <div className={styles.stageTrack}>
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -70,7 +77,7 @@ export const CampaignPipeline = () => {
               </div>
               <span className={styles.stageCount}>{String(stage.count).padStart(2, '0')}</span>
             </div>
-            {index < STAGES.length - 1 && (
+            {index < phases.length - 1 && (
               <div className={styles.arrow}>
                 <ArrowIcon />
               </div>

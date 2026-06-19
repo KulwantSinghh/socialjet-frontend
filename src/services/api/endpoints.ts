@@ -28,6 +28,7 @@ export const ENDPOINTS = {
   ADMIN: {
     USERS: '/admin/users',
     USER_DELETE: (id: string) => `/admin/users/${id}`,
+    DASHBOARD: '/admin/dashboard',
   },
 
   LEADS: {
