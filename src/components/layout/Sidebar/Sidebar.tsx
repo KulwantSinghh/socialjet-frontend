@@ -544,34 +544,6 @@ export const Sidebar = () => {
           return null;
         })}
       </nav>
-
-      {/* Footer Icons Section */}
-      <div className={styles.footer}>
-        <div className={styles.footerActions}>
-          <button className={styles.actionBtn}>
-            <Image src="/Volume.svg" alt="Volume" width={24} height={24} />
-          </button>
-
-          <button className={cn(styles.actionBtn, styles.actionBtnBox)}>
-            <Image src="/volumeMute.svg" alt="Mute" width={20} height={20} />
-          </button>
-
-          <button className={styles.actionBtn}>
-            <div className={styles.notifyWrapper}>
-              <Image src="/Notification.svg" alt="Notifications" width={24} height={24} />
-              <span className={styles.notifyDot} />
-            </div>
-          </button>
-
-          <button className={styles.actionBtn}>
-            <Image src="/darkmode.svg" alt="Dark Mode" width={20} height={20} />
-          </button>
-
-          <button className={cn(styles.actionBtn, styles.actionBtnActive)}>
-            <Image src="/lightmode.svg" alt="Light Mode" width={20} height={20} />
-          </button>
-        </div>
-      </div>
     </aside>
   );
 };

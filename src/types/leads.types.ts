@@ -14,6 +14,7 @@ export interface LeadAlert {
   updated_at: string;
   notes?: string;
   message?: string;
+  company?: string;
   created_by?: string;
   last_nurture_at?: string;
   last_nurture_message?: string;

@@ -1,5 +1,6 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
+import { AlertNotifier } from '@/components/notifications/AlertNotifier';
 import { Toaster } from 'sonner';
 import styles from './layout.module.css';
 
@@ -18,6 +19,7 @@ export default function DashboardLayout({
         <main className={styles.content}>{children}</main>
       </div>
 
+      <AlertNotifier />
       <Toaster position="top-right" richColors closeButton />
     </div>
   );
