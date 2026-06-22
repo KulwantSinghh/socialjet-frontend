@@ -2068,9 +2068,14 @@ ${styleBlocks}
           const existing = (prev ?? []).filter((d) => d.type !== 'onboarding');
           return [...existing, doc];
         });
+        // The generate response may not include the full document content — it's
+        // returned by the LIST endpoint. Refetch so the content loads in-place
+        // without requiring a page refresh.
+        await qc.invalidateQueries({ queryKey: ['campaign-documents', leadId] });
       } else {
         const brief = await campaignsService.generateKolBrief(leadId);
         qc.setQueryData(['kol-brief', leadId], brief);
+        await qc.invalidateQueries({ queryKey: ['kol-brief', leadId] });
       }
     } finally {
       setGenerating(null);
