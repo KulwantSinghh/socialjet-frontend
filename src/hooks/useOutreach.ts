@@ -10,6 +10,8 @@ import type {
   OutreachMessage,
   RejectMessageRequest,
   ReplyRequest,
+  SubmitDeliveryLinkRequest,
+  UpdateDeliveryStatusRequest,
   UpdateNegotiationStatusRequest,
 } from '@/types/outreach.types';
 
@@ -31,6 +33,7 @@ export const outreachKeys = {
   analytics: (leadId: string) => [...outreachKeys.all, 'analytics', leadId] as const,
   summary: (leadId: string) => [...outreachKeys.all, 'summary', leadId] as const,
   clientApproved: (leadId: string) => [...outreachKeys.all, 'client-approved', leadId] as const,
+  deliveryOverview: (leadId: string) => [...outreachKeys.all, 'delivery', leadId] as const,
 };
 
 // ── Inbox ─────────────────────────────────────────────────────────────────
@@ -272,6 +275,58 @@ export function useUpdateNegotiationStatus(leadId: string, creatorId: string) {
   return useMutation({
     mutationFn: (payload: UpdateNegotiationStatusRequest) =>
       outreachService.updateNegotiationStatus(leadId, creatorId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+// ── Delivery (accepted → live → complete) ───────────────────────────────────
+
+/**
+ * Per-lead delivery rollup. The backend has no per-creator delivery GET, so the
+ * thread reads its creator's delivery state out of this overview. Polls so a
+ * creator going live (or the campaign completing) surfaces without a refresh.
+ */
+export function useDeliveryOverview(leadId: string | undefined) {
+  return useQuery({
+    queryKey: outreachKeys.deliveryOverview(leadId ?? ''),
+    queryFn: () => outreachService.getDeliveryOverview(leadId!),
+    enabled: !!leadId,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+  });
+}
+
+/** Invalidate the delivery overview + inbox after a delivery mutation. */
+function useDeliveryInvalidation(leadId: string) {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: outreachKeys.deliveryOverview(leadId) });
+    qc.invalidateQueries({ queryKey: outreachKeys.inbox() });
+  };
+}
+
+export function useAcceptDeal(leadId: string, creatorId: string) {
+  const invalidate = useDeliveryInvalidation(leadId);
+  return useMutation({
+    mutationFn: () => outreachService.acceptDeal(leadId, creatorId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSubmitDeliveryLink(leadId: string, creatorId: string) {
+  const invalidate = useDeliveryInvalidation(leadId);
+  return useMutation({
+    mutationFn: (payload: SubmitDeliveryLinkRequest) =>
+      outreachService.submitDeliveryLink(leadId, creatorId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateDeliveryStatus(leadId: string, creatorId: string) {
+  const invalidate = useDeliveryInvalidation(leadId);
+  return useMutation({
+    mutationFn: (payload: UpdateDeliveryStatusRequest) =>
+      outreachService.updateDeliveryStatus(leadId, creatorId, payload),
     onSuccess: invalidate,
   });
 }

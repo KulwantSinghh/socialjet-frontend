@@ -256,6 +256,63 @@ export interface NegotiationStatusResponse {
   updated_at: string;
 }
 
+// ── Delivery tracking (post-negotiation) ──────────────────────────────────
+//
+// A separate lifecycle from negotiation: once the deal is agreed, the creator
+// goes accepted → live → complete. "complete" is calculated by the backend
+// (all accepted creators are live) but can be set manually.
+
+export type DeliveryStatus = 'accepted' | 'live' | 'complete';
+
+export interface DeliveryContentLink {
+  url: string;
+  platform: string;
+  caption?: string | null;
+  submitted_at: string;
+  submitted_by?: string | null;
+}
+
+/** Shared response shape for accept-deal / content-link / delivery-status. */
+export interface DeliveryStateResponse {
+  lead_id: string;
+  creator_id: string;
+  creator_name?: string;
+  delivery_status: DeliveryStatus | null;
+  accepted_the_deal: boolean;
+  accepted_at?: string | null;
+  live_at?: string | null;
+  completed_at?: string | null;
+  content_links: DeliveryContentLink[];
+  lead_stage?: string;
+}
+
+export interface SubmitDeliveryLinkRequest {
+  url: string;
+  /** Optional — backend auto-detects from the URL when omitted. */
+  platform?: string;
+  caption?: string;
+}
+
+export interface UpdateDeliveryStatusRequest {
+  delivery_status: DeliveryStatus;
+}
+
+export interface DeliveryOverviewCreator {
+  creator_id: string;
+  creator_name?: string;
+  delivery_status: DeliveryStatus | null;
+  accepted_the_deal: boolean;
+  content_links: DeliveryContentLink[];
+}
+
+export interface DeliveryOverviewResponse {
+  lead_id: string;
+  creators: DeliveryOverviewCreator[];
+  accepted_count: number;
+  live_count: number;
+  campaign_complete: boolean;
+}
+
 // ── Client-approved creators (5.1) ────────────────────────────────────────
 
 export interface ClientApprovedCreatorProfile {

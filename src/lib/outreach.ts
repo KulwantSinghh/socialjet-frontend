@@ -4,6 +4,7 @@
  */
 
 import type {
+  DeliveryStatus,
   NegotiationStatus,
   OutreachMessageStatus,
   OutreachMessageType,
@@ -112,3 +113,18 @@ export const NEGOTIATION_STATUS_OPTIONS: NegotiationStatus[] = [
   'on_hold',
   'no_response',
 ];
+
+const DELIVERY_STATUS_META: Record<string, { label: string; tone: Tone }> = {
+  accepted: { label: 'Accepted', tone: 'info' },
+  live: { label: 'Live', tone: 'success' },
+  complete: { label: 'Complete', tone: 'brand' },
+};
+
+export function deliveryStatusMeta(status: DeliveryStatus | string): {
+  label: string;
+  tone: Tone;
+} {
+  return DELIVERY_STATUS_META[status] ?? { label: status, tone: 'neutral' };
+}
+
+export const DELIVERY_STATUS_OPTIONS: DeliveryStatus[] = ['accepted', 'live', 'complete'];

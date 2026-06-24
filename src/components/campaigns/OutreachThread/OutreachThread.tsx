@@ -6,29 +6,29 @@ import styles from './OutreachThread.module.css';
 import { CreatorContentSection } from '@/components/campaigns/CreatorContentSection';
 import {
   outreachKeys,
+  useAcceptDeal,
   useApproveMessage,
   useCreatorConversation,
+  useDeliveryOverview,
   useNegotiate,
   useNegotiationStatus,
   useRejectMessage,
   useReply,
   useSendMessage,
+  useSubmitDeliveryLink,
   useSyncReplies,
-  useUpdateNegotiationStatus,
+  useUpdateDeliveryStatus,
 } from '@/hooks/useOutreach';
-import type {
-  NegotiationStatus,
-  OutreachInboxCreator,
-  OutreachMessage,
-} from '@/types/outreach.types';
+import type { DeliveryStatus, OutreachInboxCreator, OutreachMessage } from '@/types/outreach.types';
 import {
+  deliveryStatusMeta,
+  DELIVERY_STATUS_OPTIONS,
   formatMoney,
   formatTime,
   getInitials,
   messageStatusMeta,
   messageTypeLabel,
   negotiationStatusMeta,
-  NEGOTIATION_STATUS_OPTIONS,
 } from '@/lib/outreach';
 
 interface OutreachThreadProps {
@@ -43,12 +43,51 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
   const { messages, isLoading, emailFetchedAt } = useCreatorConversation(leadId, creatorId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const updateStatus = useUpdateNegotiationStatus(leadId, creatorId);
-
   // Live negotiation status from the backend — the inbox payload only carries
-  // a snapshot, so the dropdown reflects this query, not the stale prop.
+  // a snapshot, so the header badge reflects this query, not the stale prop.
   const { data: negotiation } = useNegotiationStatus(leadId, creatorId);
   const negotiationStatus = negotiation?.negotiation_status ?? creator.negotiation_status;
+
+  // Delivery (accepted → live → complete). Read this creator's delivery state out
+  // of the per-lead overview, then drive it from the action bar.
+  const { data: deliveryOverview } = useDeliveryOverview(leadId);
+  const delivery = deliveryOverview?.creators.find((c) => c.creator_id === creatorId);
+  const deliveryStatus = delivery?.delivery_status ?? null;
+  const liveLinks = delivery?.content_links ?? [];
+
+  const acceptDeal = useAcceptDeal(leadId, creatorId);
+  const submitLink = useSubmitDeliveryLink(leadId, creatorId);
+  const updateDelivery = useUpdateDeliveryStatus(leadId, creatorId);
+  const deliveryPending = acceptDeal.isPending || updateDelivery.isPending;
+
+  const [addingLink, setAddingLink] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+
+  // Selecting "accepted" uses the dedicated accept-deal action (records
+  // accepted_at); "live"/"complete" are manual overrides via delivery-status.
+  function handleDeliveryChange(next: DeliveryStatus) {
+    if (next === deliveryStatus) return;
+    if (next === 'accepted') {
+      acceptDeal.mutate();
+    } else {
+      updateDelivery.mutate({ delivery_status: next });
+    }
+  }
+
+  // Submitting a link auto-marks the creator live; multiple links are kept.
+  function handleAddLink() {
+    const url = linkUrl.trim();
+    if (!url) return;
+    submitLink.mutate(
+      { url },
+      {
+        onSuccess: () => {
+          setLinkUrl('');
+          setAddingLink(false);
+        },
+      }
+    );
+  }
 
   // Step 5 — Negotiation. When a creator reply lands, the backend generates a
   // counter-offer draft. `creator_reply` is taken from the synced inbound
@@ -143,30 +182,45 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
           <span className={`${styles.badge} ${styles[`tone_${statusMeta.tone}`]}`}>
             {statusMeta.label}
           </span>
+          {deliveryStatus && (
+            <span
+              className={`${styles.badge} ${styles[`tone_${deliveryStatusMeta(deliveryStatus).tone}`]}`}
+            >
+              {deliveryStatusMeta(deliveryStatus).label}
+            </span>
+          )}
           {creator.deal_amount != null && (
             <span className={styles.dealAmount}>{formatMoney(creator.deal_amount)}</span>
           )}
         </div>
       </header>
 
-      {/* Action bar */}
+      {/* Action bar — delivery (accepted → live → complete) */}
       <div className={styles.actionBar}>
         <label className={styles.statusSelect}>
-          <span>Status</span>
+          <span>Delivery</span>
           <select
-            value={negotiationStatus}
-            onChange={(e) =>
-              updateStatus.mutate({ negotiation_status: e.target.value as NegotiationStatus })
-            }
-            disabled={updateStatus.isPending}
+            value={deliveryStatus ?? ''}
+            onChange={(e) => handleDeliveryChange(e.target.value as DeliveryStatus)}
+            disabled={deliveryPending}
           >
-            {NEGOTIATION_STATUS_OPTIONS.map((opt) => (
+            <option value="" disabled>
+              Not started
+            </option>
+            {DELIVERY_STATUS_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
-                {negotiationStatusMeta(opt).label}
+                {deliveryStatusMeta(opt).label}
               </option>
             ))}
           </select>
         </label>
+        <button
+          className={styles.actionBtn}
+          onClick={() => setAddingLink((v) => !v)}
+          disabled={submitLink.isPending}
+        >
+          + Add live link
+        </button>
         {/* Creator content lives in a slide-over so the thread stays clean */}
         <CreatorContentSection
           leadId={leadId}
@@ -174,6 +228,71 @@ export const OutreachThread = ({ leadId, creator, onBack }: OutreachThreadProps)
           creatorName={creator.creator_name}
         />
       </div>
+
+      {/* Delivery sub-bar — live link entry + submitted links */}
+      {(addingLink || liveLinks.length > 0) && (
+        <div className={styles.deliveryBar}>
+          {addingLink && (
+            <div className={styles.linkForm}>
+              <input
+                className={styles.linkInput}
+                placeholder="Paste the live post link (Instagram / TikTok)…"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddLink();
+                  }
+                }}
+                autoFocus
+              />
+              <button
+                className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+                onClick={handleAddLink}
+                disabled={submitLink.isPending || !linkUrl.trim()}
+              >
+                {submitLink.isPending ? 'Adding…' : 'Add'}
+              </button>
+              <button
+                className={styles.actionBtn}
+                onClick={() => {
+                  setAddingLink(false);
+                  setLinkUrl('');
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          {liveLinks.length > 0 && (
+            <div className={styles.linkChips}>
+              {liveLinks.map((link) => (
+                <a
+                  key={link.url}
+                  className={styles.linkChip}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <path d="M15 3h6v6M10 14 21 3" />
+                  </svg>
+                  {link.platform || 'link'}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Messages */}
       <div className={styles.messages}>

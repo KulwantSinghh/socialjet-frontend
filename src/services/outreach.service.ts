@@ -4,6 +4,8 @@ import type {
   ApproveMessageRequest,
   ClientApprovedResponse,
   ComposeMessageRequest,
+  DeliveryOverviewResponse,
+  DeliveryStateResponse,
   EmailThreadResponse,
   GenerateBulkRequest,
   GenerateBulkResponse,
@@ -21,7 +23,9 @@ import type {
   RejectMessageRequest,
   ReplyRequest,
   SendBriefResponse,
+  SubmitDeliveryLinkRequest,
   SyncRepliesResponse,
+  UpdateDeliveryStatusRequest,
   UpdateNegotiationStatusRequest,
 } from '@/types/outreach.types';
 
@@ -195,6 +199,45 @@ export const outreachService = {
   // 5.1 — client-approved creators with full profiles
   getClientApproved: async (leadId: string): Promise<ClientApprovedResponse> => {
     const { data } = await apiClient.get(ENDPOINTS.CAMPAIGN_INFLUENCERS.CLIENT_APPROVED(leadId));
+    return data;
+  },
+
+  // ── Delivery (accepted → live → complete) ──────────────────────────────
+  // 6.1 — mark the creator as having accepted the deal
+  acceptDeal: async (leadId: string, creatorId: string): Promise<DeliveryStateResponse> => {
+    const { data } = await apiClient.post(ENDPOINTS.OUTREACH.ACCEPT_DEAL(leadId, creatorId));
+    return data;
+  },
+
+  // 6.2 — submit a live content link (auto-marks the creator live)
+  submitDeliveryLink: async (
+    leadId: string,
+    creatorId: string,
+    payload: SubmitDeliveryLinkRequest
+  ): Promise<DeliveryStateResponse> => {
+    const { data } = await apiClient.post(
+      ENDPOINTS.OUTREACH.CONTENT_LINK(leadId, creatorId),
+      payload
+    );
+    return data;
+  },
+
+  // 6.3 — set delivery status directly (accepted | live | complete)
+  updateDeliveryStatus: async (
+    leadId: string,
+    creatorId: string,
+    payload: UpdateDeliveryStatusRequest
+  ): Promise<DeliveryStateResponse> => {
+    const { data } = await apiClient.patch(
+      ENDPOINTS.OUTREACH.DELIVERY_STATUS(leadId, creatorId),
+      payload
+    );
+    return data;
+  },
+
+  // 6.4 — delivery rollup for every creator on a lead
+  getDeliveryOverview: async (leadId: string): Promise<DeliveryOverviewResponse> => {
+    const { data } = await apiClient.get(ENDPOINTS.OUTREACH.DELIVERY_OVERVIEW(leadId));
     return data;
   },
 };

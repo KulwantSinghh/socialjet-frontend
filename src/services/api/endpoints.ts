@@ -297,6 +297,14 @@ export const ENDPOINTS = {
     OPT_IN: (leadId: string, creatorId: string) => `/outreach/opt-in/${leadId}/${creatorId}`,
     NEGOTIATION_STATUS: (leadId: string, creatorId: string) =>
       `/outreach/negotiation/${leadId}/${creatorId}`,
+    // Delivery (accepted → live → complete)
+    ACCEPT_DEAL: (leadId: string, creatorId: string) =>
+      `/outreach/${leadId}/${creatorId}/accept-deal`,
+    CONTENT_LINK: (leadId: string, creatorId: string) =>
+      `/outreach/${leadId}/${creatorId}/content-link`,
+    DELIVERY_STATUS: (leadId: string, creatorId: string) =>
+      `/outreach/${leadId}/${creatorId}/delivery-status`,
+    DELIVERY_OVERVIEW: (leadId: string) => `/outreach/${leadId}/delivery/overview`,
   },
 
   CLIENT_CONVERSATION: {
