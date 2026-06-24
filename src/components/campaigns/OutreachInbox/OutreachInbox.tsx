@@ -12,7 +12,7 @@ import {
 import { OutreachThread } from '@/components/campaigns/OutreachThread';
 import { ClientThread } from '@/components/campaigns/ClientThread';
 import { OutreachOverview } from '@/components/campaigns/OutreachOverview';
-import type { OutreachInboxCreator, OutreachInboxLead } from '@/types/outreach.types';
+import type { OutreachInboxCreator } from '@/types/outreach.types';
 import type { ClientInboxConversation } from '@/types/clientConversation.types';
 import { formatRelativeTime, getInitials, negotiationStatusMeta } from '@/lib/outreach';
 
@@ -21,13 +21,15 @@ interface OutreachInboxProps {
   initialCreatorId?: string;
 }
 
-type LeadTab = 'influencer' | 'client';
+type LeadTab = 'client' | 'influencer';
 type LeadView = 'conversations' | 'overview';
 
 export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInboxProps) => {
   const qc = useQueryClient();
-  const { data, isLoading } = useOutreachInbox();
-  const { data: clientInbox } = useClientConversationInbox();
+  // Outreach inbox is kept for the per-client influencer (creator) lists, joined
+  // to the selected client conversation by lead_id.
+  const { data } = useOutreachInbox();
+  const { data: clientInbox, isLoading } = useClientConversationInbox();
   const leads = useMemo(() => data?.inbox ?? [], [data]);
 
   const clientConversations = useMemo(() => clientInbox?.conversations ?? [], [clientInbox]);
@@ -47,124 +49,130 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
   const [selectedCreatorId, setSelectedCreatorId] = useState<string | null>(
     initialCreatorId ?? null
   );
-  const [tab, setTab] = useState<LeadTab>('influencer');
+  // Client communication is the entry point — open a client on its email thread,
+  // and surface that client's influencers under a secondary tab.
+  const [tab, setTab] = useState<LeadTab>('client');
   const [view, setView] = useState<LeadView>('conversations');
 
   // Deep-link selection (lead/creator from URL) is applied via the initial state
   // above; once the inbox data arrives the lookups below resolve automatically.
 
-  const filteredLeads = useMemo(() => {
+  const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return leads;
-    return leads.filter(
-      (l) => l.client_name.toLowerCase().includes(q) || (l.company ?? '').toLowerCase().includes(q)
+    if (!q) return clientConversations;
+    return clientConversations.filter(
+      (c) => c.client_name.toLowerCase().includes(q) || (c.company ?? '').toLowerCase().includes(q)
     );
-  }, [leads, search]);
+  }, [clientConversations, search]);
 
+  const selectedConversation = useMemo(
+    () => clientConversations.find((c) => c.lead_id === selectedLeadId) ?? null,
+    [clientConversations, selectedLeadId]
+  );
+  // Matching outreach lead supplies the influencer creators for the secondary tab.
   const selectedLead = leads.find((l) => l.lead_id === selectedLeadId) ?? null;
   const selectedCreator =
     selectedLead?.creators.find((c) => c.creator_id === selectedCreatorId) ?? null;
 
-  const selectedClientConversation = useMemo(
-    () => clientConversations.find((c) => c.lead_id === selectedLeadId) ?? null,
-    [clientConversations, selectedLeadId]
-  );
-
-  // Sync client replies when the Clients tab is opened, then refresh thread data.
+  // Sync client replies when a client conversation is open, then refresh its thread.
   useEffect(() => {
-    if (tab !== 'client') return;
+    if (tab !== 'client' || !selectedLeadId) return;
     syncClientReplies(undefined, {
       onSuccess: () => {
-        if (selectedLeadId) {
-          qc.invalidateQueries({ queryKey: clientConversationKeys.thread(selectedLeadId) });
-        }
+        qc.invalidateQueries({ queryKey: clientConversationKeys.thread(selectedLeadId) });
       },
     });
   }, [tab, selectedLeadId, syncClientReplies, qc]);
 
-  function selectLead(lead: OutreachInboxLead) {
-    setSelectedLeadId(lead.lead_id);
+  function selectClient(conversation: ClientInboxConversation) {
+    setSelectedLeadId(conversation.lead_id);
     setSelectedCreatorId(null);
-    setTab('influencer');
+    setTab('client');
     setView('conversations');
   }
 
-  function openClientTab() {
-    setTab('client');
+  function openInfluencerTab() {
+    setTab('influencer');
     setSelectedCreatorId(null);
     setView('conversations');
   }
+
+  const headerName = selectedConversation?.client_name ?? selectedLead?.client_name ?? '';
+  const headerCompany = selectedConversation?.company ?? selectedLead?.company ?? '';
 
   return (
     <div className={styles.root}>
-      {/* Pane 1 — Leads */}
+      {/* Pane 1 — Client conversations (entry point) */}
       <aside className={styles.leadPane}>
         <div className={styles.leadHeader}>
           <h1 className={styles.title}>Inbox</h1>
           <input
             className={styles.search}
-            placeholder="Search leads…"
+            placeholder="Search clients…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className={styles.leadList}>
           {isLoading ? (
-            <div className={styles.muted}>Loading leads…</div>
-          ) : filteredLeads.length === 0 ? (
-            <div className={styles.muted}>No leads yet</div>
+            <div className={styles.muted}>Loading clients…</div>
+          ) : filteredConversations.length === 0 ? (
+            <div className={styles.muted}>No client conversations yet</div>
           ) : (
-            filteredLeads.map((lead) => (
-              <button
-                key={lead.lead_id}
-                className={`${styles.leadItem} ${selectedLeadId === lead.lead_id ? styles.leadItemActive : ''}`}
-                onClick={() => selectLead(lead)}
-              >
-                <div className={styles.leadAvatar}>{getInitials(lead.client_name)}</div>
-                <div className={styles.leadBody}>
-                  <div className={styles.leadName}>{lead.client_name}</div>
-                  <div className={styles.leadCompany}>{lead.company || '—'}</div>
-                  <div className={styles.leadStats}>
-                    <span>{lead.total_creators} creators</span>
+            filteredConversations.map((conv) => {
+              const awaitingUs = conv.last_direction === 'inbound';
+              return (
+                <button
+                  key={conv.lead_id}
+                  className={`${styles.leadItem} ${selectedLeadId === conv.lead_id ? styles.leadItemActive : ''}`}
+                  onClick={() => selectClient(conv)}
+                >
+                  <div className={styles.leadAvatar}>{getInitials(conv.client_name)}</div>
+                  <div className={styles.leadBody}>
+                    <div className={styles.leadName}>{conv.client_name}</div>
+                    <div className={styles.leadCompany}>{conv.company || '—'}</div>
+                    {conv.last_message && (
+                      <div className={styles.leadStats}>
+                        <span>{conv.last_message}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-                {lead.total_drafts > 0 && (
-                  <span className={styles.draftBadge}>{lead.total_drafts}</span>
-                )}
-              </button>
-            ))
+                  {awaitingUs && <span className={styles.draftBadge}>New</span>}
+                </button>
+              );
+            })
           )}
         </div>
       </aside>
 
-      {/* Pane 2 — Lead detail (tabs + creators).
+      {/* Pane 2 — Client detail (tabs: Clients default, Influencers secondary).
           Keyed branches so React remounts cleanly instead of morphing one
           <section> subtree into the other (avoids "removeChild of null"). */}
-      {selectedLead ? (
+      {selectedConversation || selectedLead ? (
         <section key="lead-detail" className={styles.midPane}>
           <div className={styles.midHeader}>
             <div className={styles.midTitleRow}>
               <div>
-                <div className={styles.midTitle}>{selectedLead.client_name}</div>
-                <div className={styles.midSub}>{selectedLead.company || '—'}</div>
+                <div className={styles.midTitle}>{headerName || '—'}</div>
+                <div className={styles.midSub}>{headerCompany || '—'}</div>
               </div>
             </div>
             <div className={styles.tabBar}>
               <button
-                className={`${styles.tab} ${tab === 'influencer' ? styles.tabActive : ''}`}
-                onClick={() => setTab('influencer')}
-              >
-                Influencers
-              </button>
-              <button
                 className={`${styles.tab} ${tab === 'client' ? styles.tabActive : ''}`}
-                onClick={openClientTab}
+                onClick={() => setTab('client')}
               >
                 Clients
               </button>
+              <button
+                className={`${styles.tab} ${tab === 'influencer' ? styles.tabActive : ''}`}
+                onClick={openInfluencerTab}
+              >
+                Influencers
+              </button>
             </div>
 
-            {tab === 'influencer' && (
+            {tab === 'influencer' && selectedLead && (
               <div className={styles.subControls}>
                 <div className={styles.segmented}>
                   <button
@@ -187,11 +195,15 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
 
           {tab === 'client' ? (
             <div className={styles.creatorList}>
-              <ClientRow lead={selectedLead} conversation={selectedClientConversation} active />
+              {selectedConversation ? (
+                <ClientRow conversation={selectedConversation} active />
+              ) : (
+                <div className={styles.muted}>No client conversation yet</div>
+              )}
             </div>
           ) : (
             <div className={styles.creatorList}>
-              {selectedLead.creators.length === 0 ? (
+              {!selectedLead || selectedLead.creators.length === 0 ? (
                 <div className={styles.muted}>No client-approved creators yet</div>
               ) : (
                 selectedLead.creators.map((c) => (
@@ -211,17 +223,17 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
         </section>
       ) : (
         <section key="lead-empty" className={styles.midPaneEmpty}>
-          <div className={styles.muted}>Select a lead to view its outreach</div>
+          <div className={styles.muted}>Select a client to view its communication</div>
         </section>
       )}
 
       {/* Pane 3 — Thread / Overview. Each branch is keyed for a clean remount. */}
       <section className={styles.threadPane}>
-        {selectedLead && tab === 'client' ? (
+        {selectedConversation && tab === 'client' ? (
           <ClientThread
-            key={`client:${selectedLead.lead_id}`}
-            leadId={selectedLead.lead_id}
-            preview={selectedClientConversation}
+            key={`client:${selectedConversation.lead_id}`}
+            leadId={selectedConversation.lead_id}
+            preview={selectedConversation}
           />
         ) : selectedLead && tab === 'influencer' && view === 'overview' ? (
           <OutreachOverview key="overview" leadId={selectedLead.lead_id} />
@@ -246,7 +258,11 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
-            <span>Select a creator to open the conversation</span>
+            <span>
+              {tab === 'client'
+                ? 'Select a client to open the conversation'
+                : 'Select a creator to open the conversation'}
+            </span>
           </div>
         )}
       </section>
@@ -255,17 +271,15 @@ export const OutreachInbox = ({ initialLeadId, initialCreatorId }: OutreachInbox
 };
 
 function ClientRow({
-  lead,
   conversation,
   active,
 }: {
-  lead: OutreachInboxLead;
-  conversation: ClientInboxConversation | null;
+  conversation: ClientInboxConversation;
   active: boolean;
 }) {
-  const awaitingUs = conversation?.last_direction === 'inbound';
-  const preview = conversation?.last_message;
-  const previewTime = conversation?.last_at;
+  const awaitingUs = conversation.last_direction === 'inbound';
+  const preview = conversation.last_message;
+  const previewTime = conversation.last_at;
 
   return (
     <div
@@ -274,16 +288,16 @@ function ClientRow({
       }`}
     >
       <div className={styles.creatorAvatar}>
-        <span>{getInitials(lead.client_name)}</span>
+        <span>{getInitials(conversation.client_name)}</span>
       </div>
       <div className={styles.creatorBody}>
         <div className={styles.creatorTop}>
-          <span className={styles.creatorName}>{lead.client_name}</span>
+          <span className={styles.creatorName}>{conversation.client_name}</span>
           {previewTime && (
             <span className={styles.creatorTime}>{formatRelativeTime(previewTime)}</span>
           )}
         </div>
-        <div className={styles.creatorHandle}>{lead.company || conversation?.company || '—'}</div>
+        <div className={styles.creatorHandle}>{conversation.company || '—'}</div>
         {preview ? (
           <div className={styles.creatorPreview}>{preview}</div>
         ) : (
