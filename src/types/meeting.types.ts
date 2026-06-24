@@ -17,6 +17,7 @@ export const MEETING_TYPE_LABELS: Record<string, string> = {
   follow_up: 'Follow-up',
   proposal_review: 'Proposal Review',
   closing: 'Closing Call',
+  onboarding: 'Onboarding Call',
 };
 
 export interface MeetingReport {
@@ -76,6 +77,52 @@ export interface MeetingsListResponse {
 }
 
 export interface MeetingsListParams {
+  page?: number;
+  page_size?: number;
+  meeting_status?: MeetingStatus;
+  lead_id?: string;
+}
+
+/**
+ * Onboarding call as returned by GET /meetings/onboarding-calls.
+ * Shares the core shape of `Meeting` but carries campaign-specific fields
+ * (brand_name, source) and may use meeting types outside the sales enum.
+ */
+export interface OnboardingCall {
+  meeting_id: string;
+  lead_id: string | null;
+  brand_name: string | null;
+  invitee_name: string;
+  invitee_email: string;
+  scheduled_at: string;
+  meeting_status: MeetingStatus;
+  meeting_type: string;
+  source: string;
+  event_name: string;
+  meeting_number?: number;
+  duration: string | null;
+  zoom_join_url: string | null;
+  zoom_start_url?: string | null;
+  zoom_meeting_id?: string | null;
+  has_transcript: boolean;
+  transcript_content: string | null;
+  transcript_status?: 'pending' | 'available' | 'unavailable';
+  scheduling_conflict?: boolean;
+  invite_emails?: string[];
+  calendly_reschedule_url?: string | null;
+  calendly_cancel_url?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface OnboardingCallsResponse {
+  meetings: OnboardingCall[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface OnboardingCallsParams {
   page?: number;
   page_size?: number;
   meeting_status?: MeetingStatus;

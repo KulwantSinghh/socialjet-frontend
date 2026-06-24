@@ -1,0 +1,566 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.pageTitle {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.pageSubtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+/* ---- Tabs ---- */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 2px solid var(--color-border-default);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tabActive {
+  color: var(--color-brand-purple);
+  border-bottom-color: var(--color-brand-purple);
+}
+
+.tabCount {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.tabActive .tabCount {
+  background: #eeecff;
+  color: var(--color-brand-purple);
+}
+
+/* ---- Grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+/* ---- Meeting Card ---- */
+.card {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: box-shadow var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.cardPast {
+  opacity: 0.8;
+}
+
+.cardCanceled {
+  opacity: 0.5;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.cardInfoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardName {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.cardEmail {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.cardBrand {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.cardBadges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1-5);
+}
+
+.sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.sourceOnboarding {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.sourceCalendly {
+  background: var(--color-info-50);
+  color: var(--color-info-600);
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  text-transform: capitalize;
+}
+
+.statusUpcoming {
+  background: #fef9c3;
+  color: #a16207;
+}
+.statusDone {
+  background: var(--color-success-50);
+  color: var(--color-success-700);
+}
+.statusCanceled {
+  background: var(--color-error-50);
+  color: var(--color-error-700);
+}
+
+.cardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cardTime {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.cardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.meetingNumTag {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  background: rgba(108, 99, 255, 0.08);
+  color: var(--color-brand-purple);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.meetingTypeTag {
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.leadLinkTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-600);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-100);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.leadLinkTag:hover {
+  background: var(--color-primary-100);
+}
+
+.cardActions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.joinBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-brand-purple);
+  color: #fff;
+  padding: var(--space-1-5) var(--space-3);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.joinBtn:hover {
+  background: var(--color-brand-purple-hover);
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1-5) var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.actionBtn:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-hover);
+}
+
+.actionBtnHighlight {
+  color: var(--color-brand-purple);
+  border-color: rgba(108, 99, 255, 0.4);
+  background: rgba(108, 99, 255, 0.05);
+}
+.actionBtnHighlight:hover {
+  background: rgba(108, 99, 255, 0.1);
+}
+
+/* ---- Skeleton ---- */
+.cardSkeleton {
+  height: 160px;
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.error {
+  grid-column: 1 / -1;
+  padding: var(--space-10);
+  text-align: center;
+  color: var(--color-error-600);
+  font-size: var(--text-sm);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast);
+}
+
+.closeBtn:hover {
+  color: var(--color-text-primary);
+}
+
+/* ── Transcript Drawer ── */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-surface-overlay);
+  z-index: var(--z-modal-backdrop);
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: 100%;
+  max-width: 560px;
+  background: var(--color-bg-primary);
+  box-shadow: var(--shadow-2xl);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--z-modal);
+  overflow: hidden;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-border-default);
+  flex-shrink: 0;
+}
+
+.drawerTitle {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.drawerSubtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.drawerTypeBadge {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-brand-purple);
+  background: rgba(108, 99, 255, 0.08);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.drawerTabs {
+  display: flex;
+  border-bottom: 2px solid var(--color-border-default);
+  flex-shrink: 0;
+}
+
+.drawerTab {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+.drawerTab:hover {
+  color: var(--color-text-primary);
+}
+.drawerTabActive {
+  color: var(--color-brand-purple);
+  border-bottom-color: var(--color-brand-purple);
+}
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.drawerEmpty {
+  padding: var(--space-10);
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.drawerSkeleton {
+  height: 300px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.transcriptText {
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: var(--leading-relaxed);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+/* ── AI Report ── */
+.reportContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.reportMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.reportTypeBadge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  background: rgba(108, 99, 255, 0.08);
+  color: var(--color-brand-purple);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  padding: 2px var(--space-2-5);
+  border-radius: var(--radius-full);
+}
+
+.reportSentiment {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.reportDealChange {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.reportDealUp {
+  color: var(--color-success-600);
+}
+.reportDealDown {
+  color: var(--color-error-600);
+}
+
+.reportSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.reportSectionTitle {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.reportSectionBody {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  line-height: var(--leading-relaxed);
+}
+
+.reportList {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.reportList li {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  line-height: var(--leading-relaxed);
+}
+
+.reportRecommendation {
+  background: rgba(108, 99, 255, 0.06);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.reportRecommendationLabel {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-brand-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.reportRecommendationText {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  line-height: var(--leading-relaxed);
+}

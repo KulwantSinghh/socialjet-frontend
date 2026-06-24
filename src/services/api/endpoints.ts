@@ -239,6 +239,7 @@ export const ENDPOINTS = {
 
   MEETINGS: {
     LIST: '/meetings/',
+    ONBOARDING_CALLS: '/meetings/onboarding-calls',
     DETAIL: (id: string) => `/meetings/${id}`,
     INSTANT: '/meetings/instant',
     TRANSCRIPT: (id: string) => `/meetings/${id}/transcript`,
