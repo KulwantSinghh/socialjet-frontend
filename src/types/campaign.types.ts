@@ -441,6 +441,36 @@ export interface ContentItem {
   clientNote?: string;
 }
 
+/** Delivery lifecycle status of a creator once a deal is closed. */
+export type DeliveryStatus = 'accepted' | 'live' | 'complete';
+
+/** A single published post (video or carousel) submitted by a creator. */
+export interface DeliveryLiveLink {
+  url: string;
+  platform: ContentPlatform;
+  caption?: string;
+  submittedAt?: string;
+}
+
+/** A creator on a lead with the posts they've taken live. */
+export interface DeliveryInfluencer {
+  creatorId: string;
+  name: string;
+  handle?: string;
+  avatar?: string;
+  deliveryStatus: DeliveryStatus;
+  liveLinks: DeliveryLiveLink[];
+}
+
+/** Response of GET /outreach/{lead_id}/delivery/live-links. */
+export interface DeliveryLiveLinks {
+  leadId: string;
+  influencers: DeliveryInfluencer[];
+  acceptedCount: number;
+  liveCount: number;
+  campaignComplete: boolean;
+}
+
 export interface ScheduleEmailVideoPayload {
   content_id: string;
   scheduled_at: string;

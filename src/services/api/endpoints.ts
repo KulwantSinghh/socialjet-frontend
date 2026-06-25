@@ -305,6 +305,7 @@ export const ENDPOINTS = {
     DELIVERY_STATUS: (leadId: string, creatorId: string) =>
       `/outreach/${leadId}/${creatorId}/delivery-status`,
     DELIVERY_OVERVIEW: (leadId: string) => `/outreach/${leadId}/delivery/overview`,
+    DELIVERY_LIVE_LINKS: (leadId: string) => `/outreach/${leadId}/delivery/live-links`,
   },
 
   CLIENT_CONVERSATION: {

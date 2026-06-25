@@ -26,6 +26,7 @@ import {
   useSendScheduleEmails,
 } from '@/hooks/useContentLinks';
 import { ContentLinkCard } from '@/components/campaigns/ContentLinkCard';
+import { LiveDeliveryPanel } from '@/components/campaigns/LiveDeliveryPanel';
 import { SendScheduleEmailsModal } from '@/components/campaigns/SendScheduleEmailsModal';
 import { buildSendScheduleEmailsPayload, filterScheduleEligibleLinks } from '@/lib/scheduleEmails';
 import { campaignsService } from '@/services/campaigns.service';
@@ -2747,6 +2748,8 @@ export function StagePanel({ leadId, activeStage }: Props) {
       }
       case 'content':
         return <ContentReviewStage leadId={leadId} />;
+      case 'live':
+        return <LiveDeliveryPanel leadId={leadId} />;
       default:
         return (
           <div className={styles.placeholder}>

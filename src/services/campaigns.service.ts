@@ -13,6 +13,11 @@ import type {
   Influencer,
   ContentItem,
   ContentLinkInput,
+  ContentPlatform,
+  DeliveryLiveLink,
+  DeliveryInfluencer,
+  DeliveryLiveLinks,
+  DeliveryStatus,
   SendScheduleEmailsPayload,
   ApprovalItem,
   InboxConversation,
@@ -173,6 +178,46 @@ function mapContent(raw: Record<string, unknown>): ContentItem {
     scheduledAt: raw.scheduled_at as string | undefined,
     cmNote: raw.cm_note as string | undefined,
     clientNote: raw.client_note as string | undefined,
+  };
+}
+
+function coercePlatform(value: unknown): ContentPlatform {
+  return CONTENT_PLATFORMS.includes(value as ContentPlatform)
+    ? (value as ContentPlatform)
+    : 'other';
+}
+
+function mapDeliveryLiveLink(raw: Record<string, unknown>): DeliveryLiveLink {
+  return {
+    url: (raw.url ?? raw.content_url ?? '') as string,
+    platform: coercePlatform(raw.platform),
+    caption: (raw.caption as string | undefined) || undefined,
+    submittedAt: raw.submitted_at as string | undefined,
+  };
+}
+
+function mapDeliveryInfluencer(raw: Record<string, unknown>): DeliveryInfluencer {
+  const links = Array.isArray(raw.live_links) ? (raw.live_links as Record<string, unknown>[]) : [];
+  return {
+    creatorId: (raw.creator_id ?? raw.id ?? '') as string,
+    name: (raw.name ?? 'Creator') as string,
+    handle: raw.handle as string | undefined,
+    avatar: (raw.avatar ?? raw.profile_image) as string | undefined,
+    deliveryStatus: (raw.delivery_status ?? 'live') as DeliveryStatus,
+    liveLinks: links.map(mapDeliveryLiveLink),
+  };
+}
+
+function mapDeliveryLiveLinks(raw: Record<string, unknown>): DeliveryLiveLinks {
+  const influencers = Array.isArray(raw.influencers)
+    ? (raw.influencers as Record<string, unknown>[])
+    : [];
+  return {
+    leadId: (raw.lead_id ?? '') as string,
+    influencers: influencers.map(mapDeliveryInfluencer),
+    acceptedCount: (raw.accepted_count ?? 0) as number,
+    liveCount: (raw.live_count ?? 0) as number,
+    campaignComplete: Boolean(raw.campaign_complete),
   };
 }
 
@@ -649,6 +694,12 @@ export const campaignsService = {
 
   sendScheduleEmails: async (leadId: string, payload: SendScheduleEmailsPayload): Promise<void> => {
     await apiClient.post(ENDPOINTS.CAMPAIGN_CONTENT.SEND_SCHEDULE_EMAILS(leadId), payload);
+  },
+
+  // Delivery — live posts published by creators (Live stage)
+  getDeliveryLiveLinks: async (leadId: string): Promise<DeliveryLiveLinks> => {
+    const { data } = await apiClient.get(ENDPOINTS.OUTREACH.DELIVERY_LIVE_LINKS(leadId));
+    return mapDeliveryLiveLinks(data as Record<string, unknown>);
   },
 
   // Inbox
