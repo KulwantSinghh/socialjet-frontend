@@ -2511,11 +2511,9 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
   const [showSendModal, setShowSendModal] = useState(false);
 
   const eligibleLinks = filterScheduleEligibleLinks(links);
-  const brandName = clientApproved?.brand_name ?? '';
+  const brandName = clientApproved?.brand_name?.trim() || 'your brand';
   const sendPayload =
-    brandName && eligibleLinks.length > 0
-      ? buildSendScheduleEmailsPayload(leadId, brandName, links)
-      : null;
+    eligibleLinks.length > 0 ? buildSendScheduleEmailsPayload(leadId, brandName, links) : null;
 
   function handleReview(contentId: string, status: 'cm_approved' | 'cm_rejected', note?: string) {
     review.mutate(
@@ -2563,8 +2561,8 @@ function ContentReviewStage({ leadId }: { leadId: string }) {
   const sendDisabledReason =
     eligibleLinks.length === 0
       ? 'Approve content with the client and schedule a publish date first'
-      : !brandName
-        ? 'Brand name is not available yet'
+      : !canSend
+        ? 'No creator is linked to the scheduled content yet'
         : undefined;
 
   return (
